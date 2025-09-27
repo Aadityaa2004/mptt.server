@@ -21,7 +21,7 @@ type Ingestor struct {
 	cfg    mqtmodels.IngestorConfig
 	repo   interfaces.ReadingRepository
 	client mqtt.Client
-	msgCh  chan mqtmodels.Reading
+	msgCh  chan mqtmodels.ReadingWithTopic
 	wg     sync.WaitGroup
 }
 
@@ -29,7 +29,7 @@ func New(cfg mqtmodels.IngestorConfig, r interfaces.ReadingRepository) *Ingestor
 	return &Ingestor{
 		cfg:   cfg,
 		repo:  r,
-		msgCh: make(chan mqtmodels.Reading, 4096),
+		msgCh: make(chan mqtmodels.ReadingWithTopic, 4096),
 	}
 }
 
@@ -107,25 +107,31 @@ func (i *Ingestor) onMessage(_ mqtt.Client, m mqtt.Message) {
 		payload = map[string]interface{}{"raw": string(m.Payload())}
 	}
 
-	dev := ""
+	// Parse topic to extract pi_id and device_id
+	// Expected format: sensors/<pi_id>/<device_id>/<metric>
 	parts := strings.Split(m.Topic(), "/")
-	if len(parts) >= 2 {
-		dev = parts[1] // e.g., sensors/<deviceId>/metric
+	if len(parts) < 4 {
+		log.Printf("Invalid topic format: %s, expected: sensors/<pi_id>/<device_id>/<metric>", m.Topic())
+		return
 	}
 
-	reading := mqtmodels.Reading{
+	piID := parts[1]     // e.g., sensors/pi_001/temperature/humidity -> pi_001
+	deviceID := parts[2] // e.g., sensors/pi_001/temperature/humidity -> temperature
+
+	reading := mqtmodels.ReadingWithTopic{
+		PiID:       piID,
+		DeviceID:   deviceID,
 		Topic:      m.Topic(),
-		DeviceID:   dev,
 		Payload:    payload,
 		ReceivedAt: time.Now().UTC(),
 	}
 
-	log.Printf("Queuing reading for device: %s", dev)
+	log.Printf("Queuing reading for pi: %s, device: %s", piID, deviceID)
 	i.msgCh <- reading
 }
 
 func (i *Ingestor) batchWriter(ctx context.Context) {
-	batch := make([]mqtmodels.Reading, 0, i.cfg.BatchSize)
+	batch := make([]mqtmodels.ReadingWithTopic, 0, i.cfg.BatchSize)
 	timer := time.NewTimer(i.cfg.BatchWindow)
 	defer timer.Stop()
 
@@ -133,20 +139,46 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 		if len(batch) == 0 {
 			return
 		}
-		log.Printf("Flushing batch of %d readings to MongoDB", len(batch))
-		if len(batch) == 1 {
-			if err := i.repo.InsertOne(ctx, batch[0]); err != nil {
-				log.Printf("Error inserting reading: %v", err)
-			} else {
-				log.Printf("Successfully inserted 1 reading")
+		log.Printf("Flushing batch of %d readings to PostgreSQL", len(batch))
+
+		// Process each reading in the batch
+		for _, readingWithTopic := range batch {
+			// Upsert Pi
+			pi := mqtmodels.Pi{
+				PiID:      readingWithTopic.PiID,
+				CreatedAt: readingWithTopic.ReceivedAt,
+				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt},
 			}
-		} else {
-			if err := i.repo.InsertMany(ctx, batch); err != nil {
-				log.Printf("Error inserting readings: %v", err)
-			} else {
-				log.Printf("Successfully inserted %d readings", len(batch))
+			if err := i.repo.UpsertPi(ctx, pi); err != nil {
+				log.Printf("Error upserting pi %s: %v", readingWithTopic.PiID, err)
+				continue
+			}
+
+			// Upsert Device
+			device := mqtmodels.Device{
+				PiID:      readingWithTopic.PiID,
+				DeviceID:  readingWithTopic.DeviceID,
+				CreatedAt: readingWithTopic.ReceivedAt,
+				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt, "topic": readingWithTopic.Topic},
+			}
+			if err := i.repo.UpsertDevice(ctx, device); err != nil {
+				log.Printf("Error upserting device %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
+				continue
+			}
+
+			// Insert Reading
+			reading := mqtmodels.Reading{
+				PiID:     readingWithTopic.PiID,
+				DeviceID: readingWithTopic.DeviceID,
+				Ts:       readingWithTopic.ReceivedAt,
+				Payload:  readingWithTopic.Payload,
+			}
+			if err := i.repo.InsertReading(ctx, reading); err != nil {
+				log.Printf("Error inserting reading for %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
 			}
 		}
+
+		log.Printf("Successfully processed %d readings", len(batch))
 		batch = batch[:0]
 	}
 

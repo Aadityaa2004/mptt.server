@@ -19,19 +19,23 @@ func main() {
 	// Load configuration
 	cfg := mqtingestor.Load()
 
-	// Connect to MongoDB using the standalone health package
-	mc, err := health.ConnectDBWithTimeout(20 * time.Second)
+	// Connect to PostgreSQL using the standalone health package
+	db, err := health.ConnectPostgresWithTimeout(20 * time.Second)
 	if err != nil {
-		log.Fatal("Error connecting to MongoDB:", err)
+		log.Fatal("Error connecting to PostgreSQL:", err)
 	}
-	defer mc.Disconnect(context.Background())
+	defer db.Close()
 
 	// Set the global client for health checks
-	health.Client = mc
+	health.DB = db
 
-	// Get MongoDB collection and create repository using standalone function
-	coll := health.GetCollection(mc)
-	r := implementation.NewMongoReadingRepository(coll)
+	// Create tables if they don't exist
+	if err := health.CreateTables(db); err != nil {
+		log.Fatal("Error creating tables:", err)
+	}
+
+	// Create repository
+	r := implementation.NewPostgresReadingRepository(db)
 
 	// Create and start MQTT ingestor
 	ing := mqtingestor.New(cfg, r)
@@ -64,10 +68,10 @@ func main() {
 
 	// Detailed health check
 	router.GET("/health/detailed", func(c *gin.Context) {
-		// Check MongoDB connection
-		mongoStatus := "ok"
-		if err := health.Client.Ping(context.Background(), nil); err != nil {
-			mongoStatus = "error"
+		// Check PostgreSQL connection
+		postgresStatus := "ok"
+		if err := health.PingPostgres(context.Background()); err != nil {
+			postgresStatus = "error"
 		}
 
 		// Check MQTT connection
@@ -77,7 +81,7 @@ func main() {
 		}
 
 		status := "ok"
-		if mongoStatus != "ok" || mqttStatus != "ok" {
+		if postgresStatus != "ok" || mqttStatus != "ok" {
 			status = "degraded"
 		}
 
@@ -87,8 +91,8 @@ func main() {
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"version":   "1.0.0",
 			"checks": gin.H{
-				"mongodb": gin.H{
-					"status": mongoStatus,
+				"postgres": gin.H{
+					"status": postgresStatus,
 				},
 				"mqtt": gin.H{
 					"status": mqttStatus,
@@ -100,10 +104,10 @@ func main() {
 	// Readiness check
 	router.GET("/ready", func(c *gin.Context) {
 		// Check if all dependencies are ready
-		if err := health.Client.Ping(context.Background(), nil); err != nil {
+		if err := health.PingPostgres(context.Background()); err != nil {
 			c.JSON(503, gin.H{
 				"status":  "not ready",
-				"reason":  "mongodb connection failed",
+				"reason":  "postgresql connection failed",
 				"details": err.Error(),
 			})
 			return

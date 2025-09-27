@@ -2,14 +2,22 @@ package mqtmodels
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+
+// Reading represents a time-series reading from a device
 type Reading struct {
-	ID         primitive.ObjectID      `bson:"_id,omitempty" json:"id,omitempty"`
-	Topic      string                  `bson:"topic" json:"topic"`
-	DeviceID   string                  `bson:"device_id,omitempty" json:"device_id,omitempty"`
-	Payload    map[string]interface{}  `bson:"payload" json:"payload"`
-	ReceivedAt time.Time               `bson:"received_at" json:"received_at"`
+	PiID     string                 `json:"pi_id" db:"pi_id"`
+	DeviceID string                 `json:"device_id" db:"device_id"`
+	Ts       time.Time              `json:"ts" db:"ts"`
+	Payload  map[string]interface{} `json:"payload" db:"payload"`
+}
+
+// ReadingWithTopic represents a reading with topic information for MQTT processing
+type ReadingWithTopic struct {
+	PiID       string                 `json:"pi_id"`
+	DeviceID   string                 `json:"device_id"`
+	Topic      string                 `json:"topic"`
+	Payload    map[string]interface{} `json:"payload"`
+	ReceivedAt time.Time              `json:"received_at"`
 }

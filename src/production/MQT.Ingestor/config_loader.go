@@ -60,9 +60,12 @@ func Load() mqtmodels.IngestorConfig {
 		ClientID:    defaultStr("MQTT_CLIENT_ID", "go-ingestor-1"),
 		SharedGroup: os.Getenv("MQTT_SHARED_GROUP"),
 
-		MongoURI: required("MONGODB_URI"),
-		DBName:   defaultStr("DB_NAME", "iot"),
-		CollName: defaultStr("COLL_NAME", "readings"),
+		PostgresHost:     defaultStr("POSTGRES_HOST", "localhost"),
+		PostgresPort:     mustInt("POSTGRES_PORT", 5432),
+		PostgresUser:     required("POSTGRES_USER"),
+		PostgresPassword: required("POSTGRES_PASSWORD"),
+		PostgresDB:       defaultStr("POSTGRES_DB", "iot"),
+		PostgresSSLMode:  defaultStr("POSTGRES_SSLMODE", "disable"),
 
 		BatchSize:   mustInt("BATCH_SIZE", 200),
 		BatchWindow: mustDur("BATCH_WINDOW", 1*time.Second),
