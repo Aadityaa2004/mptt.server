@@ -83,12 +83,25 @@ func CreateTables(db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Create users table
+	createUsersTable := `
+		CREATE TABLE IF NOT EXISTS users (
+			user_id     TEXT PRIMARY KEY,
+			name        TEXT NOT NULL,
+			role        TEXT NOT NULL,
+			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+			meta        JSONB NOT NULL DEFAULT '{}'::jsonb
+		);
+	`
+
 	// Create pis table
 	createPisTable := `
 		CREATE TABLE IF NOT EXISTS pis (
 			pi_id       TEXT PRIMARY KEY,
+			user_id     TEXT,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-			meta        JSONB NOT NULL DEFAULT '{}'::jsonb
+			meta        JSONB NOT NULL DEFAULT '{}'::jsonb,
+			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 		);
 	`
 
@@ -96,7 +109,8 @@ func CreateTables(db *sql.DB) error {
 	createDevicesTable := `
 		CREATE TABLE IF NOT EXISTS devices (
 			pi_id       TEXT NOT NULL,
-			device_id   TEXT NOT NULL,
+			device_id   INTEGER NOT NULL,
+			device_type TEXT,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			meta        JSONB NOT NULL DEFAULT '{}'::jsonb,
 			PRIMARY KEY (pi_id, device_id),
@@ -108,7 +122,7 @@ func CreateTables(db *sql.DB) error {
 	createReadingsTable := `
 		CREATE TABLE IF NOT EXISTS readings (
 			pi_id       TEXT NOT NULL,
-			device_id   TEXT NOT NULL,
+			device_id   INTEGER NOT NULL,
 			ts          TIMESTAMPTZ NOT NULL,
 			payload     JSONB NOT NULL,
 			PRIMARY KEY (pi_id, device_id, ts),
@@ -124,6 +138,7 @@ func CreateTables(db *sql.DB) error {
 	`
 
 	queries := []string{
+		createUsersTable,
 		createPisTable,
 		createDevicesTable,
 		createReadingsTable,

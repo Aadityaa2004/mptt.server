@@ -7,23 +7,53 @@ import (
 	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
 )
 
+// ReadingQueryParams represents parameters for reading queries
+type ReadingQueryParams struct {
+	PiID     string
+	DeviceID string
+	From     *time.Time
+	To       *time.Time
+	Limit    int
+	Page     int
+}
+
+// ReadingQueryResult represents the result of a reading query with pagination
+type ReadingQueryResult struct {
+	Items         []mqtmodels.Reading `json:"items"`
+	NextPageToken *string             `json:"next_page_token,omitempty"`
+	Total         int                 `json:"total,omitempty"`
+}
+
+// SummaryStats represents aggregate statistics
+type SummaryStats struct {
+	Count    int64         `json:"count"`
+	FirstTS  *time.Time    `json:"first_ts,omitempty"`
+	LastTS   *time.Time    `json:"last_ts,omitempty"`
+	ByDevice []DeviceStats `json:"by_device,omitempty"`
+}
+
+// DeviceStats represents stats for a specific device
+type DeviceStats struct {
+	PiID     string     `json:"pi_id"`
+	DeviceID string     `json:"device_id"`
+	Count    int64      `json:"count"`
+	FirstTS  *time.Time `json:"first_ts,omitempty"`
+	LastTS   *time.Time `json:"last_ts,omitempty"`
+}
+
 type ReadingRepository interface {
-	// Pi operations
-	UpsertPi(ctx context.Context, pi mqtmodels.Pi) error
-	GetPi(ctx context.Context, piID string) (*mqtmodels.Pi, error)
-	ListPis(ctx context.Context) ([]mqtmodels.Pi, error)
-
-	// Device operations
-	UpsertDevice(ctx context.Context, device mqtmodels.Device) error
-	GetDevice(ctx context.Context, piID, deviceID string) (*mqtmodels.Device, error)
-	ListDevicesByPi(ctx context.Context, piID string) ([]mqtmodels.Device, error)
-	ListAllDevices(ctx context.Context) ([]mqtmodels.Device, error)
-
 	// Reading operations
-	InsertReading(ctx context.Context, r mqtmodels.Reading) error
-	InsertReadings(ctx context.Context, rs []mqtmodels.Reading) error
-	GetReadingsByPi(ctx context.Context, piID string, limit, offset int) ([]mqtmodels.Reading, error)
-	GetReadingsByDevice(ctx context.Context, piID, deviceID string, limit, offset int) ([]mqtmodels.Reading, error)
-	GetReadingsByTimeRange(ctx context.Context, piID, deviceID string, start, end time.Time, limit, offset int) ([]mqtmodels.Reading, error)
-	GetLatestReadings(ctx context.Context, piID string, limit int) ([]mqtmodels.Reading, error)
+	CreateReading(ctx context.Context, reading mqtmodels.Reading) error
+	CreateReadings(ctx context.Context, readings []mqtmodels.Reading) error
+
+	// Query operations with pagination
+	GetLatestReadings(ctx context.Context, piID string) ([]mqtmodels.Reading, error)
+	GetReadings(ctx context.Context, params ReadingQueryParams) (*ReadingQueryResult, error)
+	GetReadingsByDevice(ctx context.Context, piID string, deviceID int, params ReadingQueryParams) (*ReadingQueryResult, error)
+
+	// Statistics
+	GetSummaryStats(ctx context.Context, params ReadingQueryParams) (*SummaryStats, error)
+
+	// Delete operations
+	DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID int, start, end time.Time) error
 }

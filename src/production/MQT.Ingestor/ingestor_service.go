@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,18 +19,22 @@ import (
 )
 
 type Ingestor struct {
-	cfg    mqtmodels.IngestorConfig
-	repo   interfaces.ReadingRepository
-	client mqtt.Client
-	msgCh  chan mqtmodels.ReadingWithTopic
-	wg     sync.WaitGroup
+	cfg         mqtmodels.IngestorConfig
+	readingRepo interfaces.ReadingRepository
+	piRepo      interfaces.PiRepository
+	deviceRepo  interfaces.DeviceRepository
+	client      mqtt.Client
+	msgCh       chan mqtmodels.ReadingWithTopic
+	wg          sync.WaitGroup
 }
 
-func New(cfg mqtmodels.IngestorConfig, r interfaces.ReadingRepository) *Ingestor {
+func New(cfg mqtmodels.IngestorConfig, readingRepo interfaces.ReadingRepository, piRepo interfaces.PiRepository, deviceRepo interfaces.DeviceRepository) *Ingestor {
 	return &Ingestor{
-		cfg:   cfg,
-		repo:  r,
-		msgCh: make(chan mqtmodels.ReadingWithTopic, 4096),
+		cfg:         cfg,
+		readingRepo: readingRepo,
+		piRepo:      piRepo,
+		deviceRepo:  deviceRepo,
+		msgCh:       make(chan mqtmodels.ReadingWithTopic, 4096),
 	}
 }
 
@@ -143,25 +148,33 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 
 		// Process each reading in the batch
 		for _, readingWithTopic := range batch {
+			// Convert deviceID string to int
+			deviceIDInt, err := strconv.Atoi(readingWithTopic.DeviceID)
+			if err != nil {
+				log.Printf("Error converting device_id %s to int: %v", readingWithTopic.DeviceID, err)
+				continue
+			}
+
 			// Upsert Pi
 			pi := mqtmodels.Pi{
 				PiID:      readingWithTopic.PiID,
 				CreatedAt: readingWithTopic.ReceivedAt,
 				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt},
 			}
-			if err := i.repo.UpsertPi(ctx, pi); err != nil {
+			if err := i.piRepo.CreateOrUpdatePi(ctx, pi); err != nil {
 				log.Printf("Error upserting pi %s: %v", readingWithTopic.PiID, err)
 				continue
 			}
 
 			// Upsert Device
 			device := mqtmodels.Device{
-				PiID:      readingWithTopic.PiID,
-				DeviceID:  readingWithTopic.DeviceID,
-				CreatedAt: readingWithTopic.ReceivedAt,
-				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt, "topic": readingWithTopic.Topic},
+				PiID:       readingWithTopic.PiID,
+				DeviceID:   deviceIDInt,
+				DeviceType: "sensor", // Default device type, can be extracted from topic if needed
+				CreatedAt:  readingWithTopic.ReceivedAt,
+				Meta:       map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt, "topic": readingWithTopic.Topic},
 			}
-			if err := i.repo.UpsertDevice(ctx, device); err != nil {
+			if err := i.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
 				log.Printf("Error upserting device %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
 				continue
 			}
@@ -169,11 +182,11 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			// Insert Reading
 			reading := mqtmodels.Reading{
 				PiID:     readingWithTopic.PiID,
-				DeviceID: readingWithTopic.DeviceID,
+				DeviceID: deviceIDInt, // Use converted int
 				Ts:       readingWithTopic.ReceivedAt,
 				Payload:  readingWithTopic.Payload,
 			}
-			if err := i.repo.InsertReading(ctx, reading); err != nil {
+			if err := i.readingRepo.CreateReading(ctx, reading); err != nil {
 				log.Printf("Error inserting reading for %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
 			}
 		}
