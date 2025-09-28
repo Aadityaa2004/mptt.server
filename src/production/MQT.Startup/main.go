@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	mqtingestor "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Ingestor"
 	implementation "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Implementation"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Startup/controllers"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Startup/health"
 )
 
@@ -34,20 +35,27 @@ func main() {
 		log.Fatal("Error creating tables:", err)
 	}
 
-	// Create repository
-	r := implementation.NewPostgresReadingRepository(db)
+	// Create repositories
+	readingRepo := implementation.NewPostgresReadingRepository(db)
+	userRepo := implementation.NewPostgresUserRepository(db)
+	piRepo := implementation.NewPostgresPiRepository(db)
+	deviceRepo := implementation.NewPostgresDeviceRepository(db)
 
 	// Create and start MQTT ingestor
-	ing := mqtingestor.New(cfg, r)
+	ing := mqtingestor.New(cfg, readingRepo, piRepo, deviceRepo)
 	if err := ing.Start(context.Background()); err != nil {
 		log.Fatal("Error starting MQTT ingestor:", err)
 	}
 	defer ing.Stop()
 
-	// Initialize Gin router for health endpoints
+	// Initialize Gin router
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+
+	// Create controllers and setup routes
+	controllersInstance := controllers.NewControllers(userRepo, piRepo, deviceRepo, readingRepo)
+	controllers.SetupRepoRoutes(router, controllersInstance)
 
 	// Get port from environment variable or use default
 	port := os.Getenv("PORT")
@@ -56,18 +64,8 @@ func main() {
 		fmt.Println("PORT environment variable not set, using default 8080")
 	}
 
-	// Health endpoints
+	// Legacy health endpoints (for backward compatibility)
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":    "ok",
-			"service":   "mqtt-ingestor",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"version":   "1.0.0",
-		})
-	})
-
-	// Detailed health check
-	router.GET("/health/detailed", func(c *gin.Context) {
 		// Check PostgreSQL connection
 		postgresStatus := "ok"
 		if err := health.PingPostgres(context.Background()); err != nil {
@@ -101,7 +99,6 @@ func main() {
 		})
 	})
 
-	// Readiness check
 	router.GET("/ready", func(c *gin.Context) {
 		// Check if all dependencies are ready
 		if err := health.PingPostgres(context.Background()); err != nil {

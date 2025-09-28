@@ -26,3 +26,22 @@ type IngestorConfig struct {
 	BatchSize   int
 	BatchWindow time.Duration
 }
+
+// NewIngestorConfig returns a new IngestorConfig with sensible defaults
+func NewIngestorConfig() *IngestorConfig {
+	return &IngestorConfig{
+		// MQTT defaults
+		BrokerPort: 8883, // Secure MQTT port
+		UseTLS:     true,
+		Topic:      "sensors/+/+/+", // pi_id/device_id/reading format
+		ClientID:   "mqtt-ingestor",
+
+		// PostgreSQL defaults
+		PostgresPort:    5432,
+		PostgresSSLMode: "require", // Secure by default in production
+
+		// Ingestion defaults
+		BatchSize:   1000,            // Batch 1000 readings at a time
+		BatchWindow: 5 * time.Second, // Or flush every 5 seconds
+	}
+}
