@@ -155,29 +155,14 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 				continue
 			}
 
-			// Upsert Pi
-			pi := mqtmodels.Pi{
-				PiID:      readingWithTopic.PiID,
-				CreatedAt: readingWithTopic.ReceivedAt,
-				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt},
-			}
-			if err := i.piRepo.CreateOrUpdatePi(ctx, pi); err != nil {
-				log.Printf("Error upserting pi %s: %v", readingWithTopic.PiID, err)
+			// Ensure Pi exists before accepting readings (no auto-upsert)
+			if _, err := i.piRepo.GetPi(ctx, readingWithTopic.PiID); err != nil {
+				log.Printf("Skipping reading: pi %s not found: %v", readingWithTopic.PiID, err)
 				continue
 			}
 
-			// Upsert Device
-			device := mqtmodels.Device{
-				PiID:       readingWithTopic.PiID,
-				DeviceID:   deviceIDInt,
-				DeviceType: "sensor", // Default device type, can be extracted from topic if needed
-				CreatedAt:  readingWithTopic.ReceivedAt,
-				Meta:       map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt, "topic": readingWithTopic.Topic},
-			}
-			if err := i.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
-				log.Printf("Error upserting device %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
-				continue
-			}
+			// Optionally ensure device exists; if schema FK exists, insert will fail otherwise
+			// We avoid auto-creating devices to keep control flow explicit
 
 			// Insert Reading
 			reading := mqtmodels.Reading{
