@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,18 +19,22 @@ import (
 )
 
 type Ingestor struct {
-	cfg    mqtmodels.IngestorConfig
-	repo   interfaces.ReadingRepository
-	client mqtt.Client
-	msgCh  chan mqtmodels.ReadingWithTopic
-	wg     sync.WaitGroup
+	cfg         mqtmodels.IngestorConfig
+	readingRepo interfaces.ReadingRepository
+	piRepo      interfaces.PiRepository
+	deviceRepo  interfaces.DeviceRepository
+	client      mqtt.Client
+	msgCh       chan mqtmodels.ReadingWithTopic
+	wg          sync.WaitGroup
 }
 
-func New(cfg mqtmodels.IngestorConfig, r interfaces.ReadingRepository) *Ingestor {
+func New(cfg mqtmodels.IngestorConfig, readingRepo interfaces.ReadingRepository, piRepo interfaces.PiRepository, deviceRepo interfaces.DeviceRepository) *Ingestor {
 	return &Ingestor{
-		cfg:   cfg,
-		repo:  r,
-		msgCh: make(chan mqtmodels.ReadingWithTopic, 4096),
+		cfg:         cfg,
+		readingRepo: readingRepo,
+		piRepo:      piRepo,
+		deviceRepo:  deviceRepo,
+		msgCh:       make(chan mqtmodels.ReadingWithTopic, 4096),
 	}
 }
 
@@ -143,37 +148,30 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 
 		// Process each reading in the batch
 		for _, readingWithTopic := range batch {
-			// Upsert Pi
-			pi := mqtmodels.Pi{
-				PiID:      readingWithTopic.PiID,
-				CreatedAt: readingWithTopic.ReceivedAt,
-				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt},
-			}
-			if err := i.repo.UpsertPi(ctx, pi); err != nil {
-				log.Printf("Error upserting pi %s: %v", readingWithTopic.PiID, err)
+			// Convert deviceID string to int
+			deviceIDInt, err := strconv.Atoi(readingWithTopic.DeviceID)
+			if err != nil {
+				log.Printf("Error converting device_id %s to int: %v", readingWithTopic.DeviceID, err)
 				continue
 			}
 
-			// Upsert Device
-			device := mqtmodels.Device{
-				PiID:      readingWithTopic.PiID,
-				DeviceID:  readingWithTopic.DeviceID,
-				CreatedAt: readingWithTopic.ReceivedAt,
-				Meta:      map[string]interface{}{"last_seen": readingWithTopic.ReceivedAt, "topic": readingWithTopic.Topic},
-			}
-			if err := i.repo.UpsertDevice(ctx, device); err != nil {
-				log.Printf("Error upserting device %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
+			// Ensure Pi exists before accepting readings (no auto-upsert)
+			if _, err := i.piRepo.GetPi(ctx, readingWithTopic.PiID); err != nil {
+				log.Printf("Skipping reading: pi %s not found: %v", readingWithTopic.PiID, err)
 				continue
 			}
+
+			// Optionally ensure device exists; if schema FK exists, insert will fail otherwise
+			// We avoid auto-creating devices to keep control flow explicit
 
 			// Insert Reading
 			reading := mqtmodels.Reading{
 				PiID:     readingWithTopic.PiID,
-				DeviceID: readingWithTopic.DeviceID,
+				DeviceID: deviceIDInt, // Use converted int
 				Ts:       readingWithTopic.ReceivedAt,
 				Payload:  readingWithTopic.Payload,
 			}
-			if err := i.repo.InsertReading(ctx, reading); err != nil {
+			if err := i.readingRepo.CreateReading(ctx, reading); err != nil {
 				log.Printf("Error inserting reading for %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
 			}
 		}

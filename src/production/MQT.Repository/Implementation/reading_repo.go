@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/lib/pq"
 	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
 type PostgresReadingRepository struct {
@@ -19,178 +21,14 @@ func NewPostgresReadingRepository(db *sql.DB) *PostgresReadingRepository {
 	return &PostgresReadingRepository{db: db}
 }
 
-// Pi operations
-func (r *PostgresReadingRepository) UpsertPi(ctx context.Context, pi mqtmodels.Pi) error {
-	query := `
-		INSERT INTO pis (pi_id, created_at, meta) 
-		VALUES ($1, $2, $3) 
-		ON CONFLICT (pi_id) 
-		DO UPDATE SET meta = EXCLUDED.meta
-	`
-
-	metaJSON, err := json.Marshal(pi.Meta)
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, pi.PiID, pi.CreatedAt, metaJSON)
-	return err
-}
-
-func (r *PostgresReadingRepository) GetPi(ctx context.Context, piID string) (*mqtmodels.Pi, error) {
-	query := `SELECT pi_id, created_at, meta FROM pis WHERE pi_id = $1`
-
-	var pi mqtmodels.Pi
-	var metaJSON []byte
-
-	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.CreatedAt, &metaJSON)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if err := json.Unmarshal(metaJSON, &pi.Meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-	}
-
-	return &pi, nil
-}
-
-func (r *PostgresReadingRepository) ListPis(ctx context.Context) ([]mqtmodels.Pi, error) {
-	query := `SELECT pi_id, created_at, meta FROM pis ORDER BY created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var pis []mqtmodels.Pi
-	for rows.Next() {
-		var pi mqtmodels.Pi
-		var metaJSON []byte
-
-		if err := rows.Scan(&pi.PiID, &pi.CreatedAt, &metaJSON); err != nil {
-			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &pi.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-		}
-
-		pis = append(pis, pi)
-	}
-
-	return pis, rows.Err()
-}
-
-// Device operations
-func (r *PostgresReadingRepository) UpsertDevice(ctx context.Context, device mqtmodels.Device) error {
-	query := `
-		INSERT INTO devices (pi_id, device_id, created_at, meta) 
-		VALUES ($1, $2, $3, $4) 
-		ON CONFLICT (pi_id, device_id) 
-		DO UPDATE SET meta = EXCLUDED.meta
-	`
-
-	metaJSON, err := json.Marshal(device.Meta)
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, device.PiID, device.DeviceID, device.CreatedAt, metaJSON)
-	return err
-}
-
-func (r *PostgresReadingRepository) GetDevice(ctx context.Context, piID, deviceID string) (*mqtmodels.Device, error) {
-	query := `SELECT pi_id, device_id, created_at, meta FROM devices WHERE pi_id = $1 AND device_id = $2`
-
-	var device mqtmodels.Device
-	var metaJSON []byte
-
-	err := r.db.QueryRowContext(ctx, query, piID, deviceID).Scan(&device.PiID, &device.DeviceID, &device.CreatedAt, &metaJSON)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if err := json.Unmarshal(metaJSON, &device.Meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-	}
-
-	return &device, nil
-}
-
-func (r *PostgresReadingRepository) ListDevicesByPi(ctx context.Context, piID string) ([]mqtmodels.Device, error) {
-	query := `SELECT pi_id, device_id, created_at, meta FROM devices WHERE pi_id = $1 ORDER BY created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query, piID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var devices []mqtmodels.Device
-	for rows.Next() {
-		var device mqtmodels.Device
-		var metaJSON []byte
-
-		if err := rows.Scan(&device.PiID, &device.DeviceID, &device.CreatedAt, &metaJSON); err != nil {
-			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &device.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-		}
-
-		devices = append(devices, device)
-	}
-
-	return devices, rows.Err()
-}
-
-func (r *PostgresReadingRepository) ListAllDevices(ctx context.Context) ([]mqtmodels.Device, error) {
-	query := `SELECT pi_id, device_id, created_at, meta FROM devices ORDER BY pi_id, created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var devices []mqtmodels.Device
-	for rows.Next() {
-		var device mqtmodels.Device
-		var metaJSON []byte
-
-		if err := rows.Scan(&device.PiID, &device.DeviceID, &device.CreatedAt, &metaJSON); err != nil {
-			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &device.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-		}
-
-		devices = append(devices, device)
-	}
-
-	return devices, rows.Err()
-}
-
 // Reading operations
-func (r *PostgresReadingRepository) InsertReading(ctx context.Context, reading mqtmodels.Reading) error {
+func (r *PostgresReadingRepository) CreateReading(ctx context.Context, reading mqtmodels.Reading) error {
 	query := `
-		INSERT INTO readings (pi_id, device_id, ts, payload) 
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (pi_id, device_id, ts) 
-		DO UPDATE SET payload = EXCLUDED.payload
-	`
+        INSERT INTO readings (pi_id, device_id, ts, payload) 
+        VALUES ($1, $2, $3, $4)
+    `
 
-	payloadJSON, err := json.Marshal(reading.Payload)
+	payloadJSON, err := json.Marshal(ensureMetaNotNull(reading.Payload))
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
@@ -199,118 +37,47 @@ func (r *PostgresReadingRepository) InsertReading(ctx context.Context, reading m
 	return err
 }
 
-func (r *PostgresReadingRepository) InsertReadings(ctx context.Context, readings []mqtmodels.Reading) error {
+func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings []mqtmodels.Reading) error {
 	if len(readings) == 0 {
 		return nil
 	}
 
-	// Prepare the COPY statement for bulk insert
+	// Use batched VALUES upsert for conflict handling
 	txn, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer txn.Rollback()
 
-	stmt, err := txn.Prepare(pq.CopyIn("readings", "pi_id", "device_id", "ts", "payload"))
-	if err != nil {
-		return err
-	}
+	// Build batched INSERT (append-only)
+	valueStrings := make([]string, len(readings))
+	args := make([]interface{}, 0, len(readings)*4)
 
-	for _, reading := range readings {
-		payloadJSON, err := json.Marshal(reading.Payload)
+	for i, reading := range readings {
+		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d)",
+			i*4+1, i*4+2, i*4+3, i*4+4)
+
+		payloadJSON, err := json.Marshal(ensureMetaNotNull(reading.Payload))
 		if err != nil {
 			return fmt.Errorf("failed to marshal payload: %w", err)
 		}
 
-		_, err = stmt.Exec(reading.PiID, reading.DeviceID, reading.Ts, payloadJSON)
-		if err != nil {
-			return err
-		}
+		args = append(args, reading.PiID, reading.DeviceID, reading.Ts, payloadJSON)
 	}
 
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
+	valuesClause := strings.Join(valueStrings, ",")
 
-	err = stmt.Close()
+	query := fmt.Sprintf(`
+        INSERT INTO readings (pi_id, device_id, ts, payload) 
+        VALUES %s
+    `, valuesClause)
+
+	_, err = txn.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
 
 	return txn.Commit()
-}
-
-func (r *PostgresReadingRepository) GetReadingsByPi(ctx context.Context, piID string, limit, offset int) ([]mqtmodels.Reading, error) {
-	query := `
-		SELECT pi_id, device_id, ts, payload 
-		FROM readings 
-		WHERE pi_id = $1 
-		ORDER BY ts DESC 
-		LIMIT $2 OFFSET $3
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, piID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return r.scanReadings(rows)
-}
-
-func (r *PostgresReadingRepository) GetReadingsByDevice(ctx context.Context, piID, deviceID string, limit, offset int) ([]mqtmodels.Reading, error) {
-	query := `
-		SELECT pi_id, device_id, ts, payload 
-		FROM readings 
-		WHERE pi_id = $1 AND device_id = $2 
-		ORDER BY ts DESC 
-		LIMIT $3 OFFSET $4
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, piID, deviceID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return r.scanReadings(rows)
-}
-
-func (r *PostgresReadingRepository) GetReadingsByTimeRange(ctx context.Context, piID, deviceID string, start, end time.Time, limit, offset int) ([]mqtmodels.Reading, error) {
-	query := `
-		SELECT pi_id, device_id, ts, payload 
-		FROM readings 
-		WHERE pi_id = $1 AND device_id = $2 AND ts BETWEEN $3 AND $4 
-		ORDER BY ts DESC 
-		LIMIT $5 OFFSET $6
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, piID, deviceID, start, end, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return r.scanReadings(rows)
-}
-
-func (r *PostgresReadingRepository) GetLatestReadings(ctx context.Context, piID string, limit int) ([]mqtmodels.Reading, error) {
-	query := `
-		SELECT DISTINCT ON (device_id) pi_id, device_id, ts, payload 
-		FROM readings 
-		WHERE pi_id = $1 
-		ORDER BY device_id, ts DESC 
-		LIMIT $2
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, piID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return r.scanReadings(rows)
 }
 
 func (r *PostgresReadingRepository) scanReadings(rows *sql.Rows) ([]mqtmodels.Reading, error) {
@@ -332,4 +99,234 @@ func (r *PostgresReadingRepository) scanReadings(rows *sql.Rows) ([]mqtmodels.Re
 	}
 
 	return readings, rows.Err()
+}
+
+func (r *PostgresReadingRepository) DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID int, start, end time.Time) error {
+	query := `DELETE FROM readings WHERE pi_id = $1 AND device_id = $2 AND ts BETWEEN $3 AND $4`
+
+	_, err := r.db.ExecContext(ctx, query, piID, deviceID, start, end)
+	return err
+}
+
+// Enhanced methods for new interface
+
+func (r *PostgresReadingRepository) GetLatestReadings(ctx context.Context, piID string) ([]mqtmodels.Reading, error) {
+	query := `
+		SELECT DISTINCT ON (device_id) pi_id, device_id, ts, payload 
+		FROM readings 
+		WHERE pi_id = $1 
+		ORDER BY device_id, ts DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, piID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanReadings(rows)
+}
+
+func (r *PostgresReadingRepository) GetReadings(ctx context.Context, params interfaces.ReadingQueryParams) (*interfaces.ReadingQueryResult, error) {
+	offset := (params.Page - 1) * params.Limit
+
+	query := `SELECT pi_id, device_id, ts, payload FROM readings WHERE 1=1`
+	args := []interface{}{}
+	argIndex := 1
+
+	if params.PiID != "" {
+		query += fmt.Sprintf(" AND pi_id = $%d", argIndex)
+		args = append(args, params.PiID)
+		argIndex++
+	}
+
+	if params.DeviceID != "" {
+		deviceIDInt, err := strconv.Atoi(params.DeviceID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid device_id: %w", err)
+		}
+		query += fmt.Sprintf(" AND device_id = $%d", argIndex)
+		args = append(args, deviceIDInt)
+		argIndex++
+	}
+
+	if params.From != nil {
+		query += fmt.Sprintf(" AND ts >= $%d", argIndex)
+		args = append(args, *params.From)
+		argIndex++
+	}
+
+	if params.To != nil {
+		query += fmt.Sprintf(" AND ts <= $%d", argIndex)
+		args = append(args, *params.To)
+		argIndex++
+	}
+
+	query += fmt.Sprintf(" ORDER BY ts DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, params.Limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	readings, err := r.scanReadings(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &interfaces.ReadingQueryResult{
+		Items: readings,
+	}
+
+	// Check if there are more pages
+	if len(readings) == params.Limit {
+		nextPageToken := strconv.Itoa(params.Page + 1)
+		result.NextPageToken = &nextPageToken
+	}
+
+	return result, nil
+}
+
+func (r *PostgresReadingRepository) GetReadingsByDevice(ctx context.Context, piID string, deviceID int, params interfaces.ReadingQueryParams) (*interfaces.ReadingQueryResult, error) {
+	offset := (params.Page - 1) * params.Limit
+
+	query := `SELECT pi_id, device_id, ts, payload FROM readings WHERE pi_id = $1 AND device_id = $2`
+	args := []interface{}{piID, deviceID}
+	argIndex := 3
+
+	if params.From != nil {
+		query += fmt.Sprintf(" AND ts >= $%d", argIndex)
+		args = append(args, *params.From)
+		argIndex++
+	}
+
+	if params.To != nil {
+		query += fmt.Sprintf(" AND ts <= $%d", argIndex)
+		args = append(args, *params.To)
+		argIndex++
+	}
+
+	query += fmt.Sprintf(" ORDER BY ts DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, params.Limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	readings, err := r.scanReadings(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &interfaces.ReadingQueryResult{
+		Items: readings,
+	}
+
+	// Check if there are more pages
+	if len(readings) == params.Limit {
+		nextPageToken := strconv.Itoa(params.Page + 1)
+		result.NextPageToken = &nextPageToken
+	}
+
+	return result, nil
+}
+
+func (r *PostgresReadingRepository) GetSummaryStats(ctx context.Context, params interfaces.ReadingQueryParams) (*interfaces.SummaryStats, error) {
+	query := `SELECT COUNT(*) FROM readings WHERE 1=1`
+	args := []interface{}{}
+	argIndex := 1
+
+	if params.PiID != "" {
+		query += fmt.Sprintf(" AND pi_id = $%d", argIndex)
+		args = append(args, params.PiID)
+		argIndex++
+	}
+
+	if params.DeviceID != "" {
+		deviceIDInt, err := strconv.Atoi(params.DeviceID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid device_id: %w", err)
+		}
+		query += fmt.Sprintf(" AND device_id = $%d", argIndex)
+		args = append(args, deviceIDInt)
+		argIndex++
+	}
+
+	if params.From != nil {
+		query += fmt.Sprintf(" AND ts >= $%d", argIndex)
+		args = append(args, *params.From)
+		argIndex++
+	}
+
+	if params.To != nil {
+		query += fmt.Sprintf(" AND ts <= $%d", argIndex)
+		args = append(args, *params.To)
+		argIndex++
+	}
+
+	var count int64
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &interfaces.SummaryStats{
+		Count: count,
+	}
+
+	// Get first and last timestamps
+	if count > 0 {
+		timeQuery := strings.Replace(query, "COUNT(*)", "MIN(ts), MAX(ts)", 1)
+		var firstTS, lastTS time.Time
+		err := r.db.QueryRowContext(ctx, timeQuery, args...).Scan(&firstTS, &lastTS)
+		if err == nil {
+			stats.FirstTS = &firstTS
+			stats.LastTS = &lastTS
+		}
+	}
+
+	// Get stats by device if requested
+	if params.PiID != "" {
+		deviceStatsQuery := `
+			SELECT device_id, COUNT(*), MIN(ts), MAX(ts) 
+			FROM readings 
+			WHERE pi_id = $1
+		`
+		deviceArgs := []interface{}{params.PiID}
+
+		if params.From != nil {
+			deviceStatsQuery += " AND ts >= $2"
+			deviceArgs = append(deviceArgs, *params.From)
+		}
+
+		if params.To != nil {
+			deviceStatsQuery += " AND ts <= $" + strconv.Itoa(len(deviceArgs)+1)
+			deviceArgs = append(deviceArgs, *params.To)
+		}
+
+		deviceStatsQuery += " GROUP BY device_id ORDER BY device_id"
+
+		rows, err := r.db.QueryContext(ctx, deviceStatsQuery, deviceArgs...)
+		if err == nil {
+			defer rows.Close()
+
+			for rows.Next() {
+				var deviceStat interfaces.DeviceStats
+				var firstTS, lastTS time.Time
+
+				if err := rows.Scan(&deviceStat.DeviceID, &deviceStat.Count, &firstTS, &lastTS); err == nil {
+					deviceStat.PiID = params.PiID
+					deviceStat.FirstTS = &firstTS
+					deviceStat.LastTS = &lastTS
+					stats.ByDevice = append(stats.ByDevice, deviceStat)
+				}
+			}
+		}
+	}
+
+	return stats, nil
 }
