@@ -24,11 +24,9 @@ func NewPostgresReadingRepository(db *sql.DB) *PostgresReadingRepository {
 // Reading operations
 func (r *PostgresReadingRepository) CreateReading(ctx context.Context, reading mqtmodels.Reading) error {
 	query := `
-		INSERT INTO readings (pi_id, device_id, ts, payload) 
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (pi_id, device_id, ts) 
-		DO UPDATE SET payload = EXCLUDED.payload
-	`
+        INSERT INTO readings (pi_id, device_id, ts, payload) 
+        VALUES ($1, $2, $3, $4)
+    `
 
 	payloadJSON, err := json.Marshal(ensureMetaNotNull(reading.Payload))
 	if err != nil {
@@ -51,7 +49,7 @@ func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings
 	}
 	defer txn.Rollback()
 
-	// Build batched INSERT with ON CONFLICT
+	// Build batched INSERT (append-only)
 	valueStrings := make([]string, len(readings))
 	args := make([]interface{}, 0, len(readings)*4)
 
@@ -70,11 +68,9 @@ func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings
 	valuesClause := strings.Join(valueStrings, ",")
 
 	query := fmt.Sprintf(`
-		INSERT INTO readings (pi_id, device_id, ts, payload) 
-		VALUES %s
-		ON CONFLICT (pi_id, device_id, ts) 
-		DO UPDATE SET payload = EXCLUDED.payload
-	`, valuesClause)
+        INSERT INTO readings (pi_id, device_id, ts, payload) 
+        VALUES %s
+    `, valuesClause)
 
 	_, err = txn.ExecContext(ctx, query, args...)
 	if err != nil {
