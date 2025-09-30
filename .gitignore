@@ -57,3 +57,6 @@ build/
 # Temporary files
 tmp/
 temp/
+
+# venv
+myenv/

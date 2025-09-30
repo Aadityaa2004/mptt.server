@@ -117,6 +117,16 @@ func (i *Ingestor) onMessage(_ mqtt.Client, m mqtt.Message) {
 	parts := strings.Split(m.Topic(), "/")
 	if len(parts) < 4 {
 		log.Printf("Invalid topic format: %s, expected: sensors/<pi_id>/<device_id>/<metric>", m.Topic())
+		// Try to extract pi_id and device_id from what we have for error reporting
+		piID := "unknown"
+		deviceID := "unknown"
+		if len(parts) >= 2 {
+			piID = parts[1]
+		}
+		if len(parts) >= 3 {
+			deviceID = parts[2]
+		}
+		i.publishError(piID, deviceID, "invalid_topic", fmt.Sprintf("Invalid topic format: %s, expected: sensors/<pi_id>/<device_id>/<metric>", m.Topic()))
 		return
 	}
 
@@ -158,6 +168,7 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			// Ensure Pi exists before accepting readings (no auto-upsert)
 			if _, err := i.piRepo.GetPi(ctx, readingWithTopic.PiID); err != nil {
 				log.Printf("Skipping reading: pi %s not found: %v", readingWithTopic.PiID, err)
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "pi_not_found", fmt.Sprintf("Pi %s does not exist", readingWithTopic.PiID))
 				continue
 			}
 
@@ -173,6 +184,7 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			}
 			if err := i.readingRepo.CreateReading(ctx, reading); err != nil {
 				log.Printf("Error inserting reading for %s/%s: %v", readingWithTopic.PiID, readingWithTopic.DeviceID, err)
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "insert_failed", fmt.Sprintf("Failed to insert reading: %v", err))
 			}
 		}
 
@@ -228,4 +240,34 @@ func (i *Ingestor) tlsConfig(caFile string) (*tls.Config, error) {
 	}
 	cfg.RootCAs = cp
 	return cfg, nil
+}
+
+// publishError publishes an error message to the error topic for Pi feedback
+func (i *Ingestor) publishError(piID, deviceID, errorType, message string) {
+	if i.client == nil || !i.client.IsConnected() {
+		return
+	}
+
+	errorPayload := map[string]interface{}{
+		"error_type": errorType,
+		"message":    message,
+		"pi_id":      piID,
+		"device_id":  deviceID,
+		"timestamp":  time.Now().UTC(),
+	}
+
+	payloadJSON, err := json.Marshal(errorPayload)
+	if err != nil {
+		log.Printf("Failed to marshal error payload: %v", err)
+		return
+	}
+
+	errorTopic := fmt.Sprintf("ingestor/errors/%s/%s", piID, deviceID)
+	token := i.client.Publish(errorTopic, 1, false, payloadJSON)
+
+	if token.Wait() && token.Error() != nil {
+		log.Printf("Failed to publish error to %s: %v", errorTopic, token.Error())
+	} else {
+		log.Printf("Published error to %s: %s", errorTopic, message)
+	}
 }
