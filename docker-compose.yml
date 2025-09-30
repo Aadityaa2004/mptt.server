@@ -39,6 +39,41 @@ services:
     networks:
       - mqtt-network
 
+  # MQTT Bridge - Forwards messages from external broker to local broker
+  mqtt-bridge:
+    build: ./bridge
+    container_name: mqtt-bridge
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      # External Broker Configuration (where your RPi sensors connect)
+      - EXTERNAL_BROKER_HOST=172.24.131.97
+      - EXTERNAL_BROKER_PORT=1883
+      - EXTERNAL_BROKER_USER=${EXTERNAL_BROKER_USER:-}
+      - EXTERNAL_BROKER_PASS=${EXTERNAL_BROKER_PASS:-}
+      
+      # Local Broker Configuration (Docker Mosquitto)
+      - LOCAL_BROKER_HOST=mosquitto
+      - LOCAL_BROKER_PORT=1883
+      - LOCAL_BROKER_USER=${LOCAL_BROKER_USER:-}
+      - LOCAL_BROKER_PASS=${LOCAL_BROKER_PASS:-}
+      
+      # Topic Configuration
+      - TOPIC_FILTER=${TOPIC_FILTER:-sensors/#}
+      
+      # Timezone
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('mosquitto', 1883), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
   # Go MQTT Ingestor Service
   ingestor:
     build: .

@@ -5,6 +5,7 @@ This solves the network connectivity issue between Docker and external broker
 """
 
 import json
+import os
 import time
 import sys
 from datetime import datetime
@@ -15,12 +16,16 @@ except ImportError:
     print("❌ paho-mqtt not installed. Install with: pip install paho-mqtt")
     sys.exit(1)
 
-# Configuration
-EXTERNAL_BROKER = "172.24.131.97"  # The broker your RPi can reach
-EXTERNAL_PORT = 1883
-LOCAL_BROKER = "localhost"  # Your Docker broker
-LOCAL_PORT = 1883
-TOPIC_FILTER = "sensors/#"
+# Configuration from environment variables
+EXTERNAL_BROKER = os.getenv("EXTERNAL_BROKER_HOST", "172.24.131.97")
+EXTERNAL_PORT = int(os.getenv("EXTERNAL_BROKER_PORT", "1883"))
+LOCAL_BROKER = os.getenv("LOCAL_BROKER_HOST", "mosquitto")  # Docker service name
+LOCAL_PORT = int(os.getenv("LOCAL_BROKER_PORT", "1883"))
+TOPIC_FILTER = os.getenv("TOPIC_FILTER", "sensors/#")
+EXTERNAL_USER = os.getenv("EXTERNAL_BROKER_USER", "")
+EXTERNAL_PASS = os.getenv("EXTERNAL_BROKER_PASS", "")
+LOCAL_USER = os.getenv("LOCAL_BROKER_USER", "")
+LOCAL_PASS = os.getenv("LOCAL_BROKER_PASS", "")
 
 class MQTTBridge:
     def __init__(self):
@@ -92,12 +97,20 @@ class MQTTBridge:
         self.external_client.on_disconnect = self.on_external_disconnect
         self.external_client.on_message = self.on_external_message
         
+        # Add authentication for external broker if provided
+        if EXTERNAL_USER and EXTERNAL_PASS:
+            self.external_client.username_pw_set(EXTERNAL_USER, EXTERNAL_PASS)
+        
         # Create local broker client with new API
         self.local_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, 
                                       client_id="mqtt_bridge_local", 
                                       clean_session=False)
         self.local_client.on_connect = self.on_local_connect
         self.local_client.on_disconnect = self.on_local_disconnect
+        
+        # Add authentication for local broker if provided
+        if LOCAL_USER and LOCAL_PASS:
+            self.local_client.username_pw_set(LOCAL_USER, LOCAL_PASS)
         
         # Enable auto-reconnect
         self.external_client.enable_logger()
