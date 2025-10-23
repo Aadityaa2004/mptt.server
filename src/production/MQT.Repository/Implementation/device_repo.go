@@ -3,10 +3,9 @@ package implementation
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
@@ -19,31 +18,25 @@ func NewPostgresDeviceRepository(db *sql.DB) *PostgresDeviceRepository {
 }
 
 // Create device (idempotent upsert)
-func (r *PostgresDeviceRepository) CreateOrUpdateDevice(ctx context.Context, device mqtmodels.Device) error {
+func (r *PostgresDeviceRepository) CreateOrUpdateDevice(ctx context.Context, device hardware_models.Device) error {
 	query := `
-		INSERT INTO devices (pi_id, device_id, device_type, created_at, meta) 
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO devices (pi_id, device_id, device_type, created_at) 
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (pi_id, device_id) 
-		DO UPDATE SET device_type = EXCLUDED.device_type, meta = EXCLUDED.meta
+		DO UPDATE SET device_type = EXCLUDED.device_type
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(device.Meta))
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, device.PiID, device.DeviceID, device.DeviceType, device.CreatedAt, metaJSON)
+	_, err := r.db.ExecContext(ctx, query, device.PiID, device.DeviceID, device.DeviceType, device.CreatedAt)
 	return err
 }
 
 // Read devices
-func (r *PostgresDeviceRepository) GetDevice(ctx context.Context, piID string, deviceID int) (*mqtmodels.Device, error) {
-	query := `SELECT pi_id, device_id, device_type, created_at, meta FROM devices WHERE pi_id = $1 AND device_id = $2`
+func (r *PostgresDeviceRepository) GetDevice(ctx context.Context, piID string, deviceID int) (*hardware_models.Device, error) {
+	query := `SELECT pi_id, device_id, device_type, created_at FROM devices WHERE pi_id = $1 AND device_id = $2`
 
-	var device mqtmodels.Device
-	var metaJSON []byte
+	var device hardware_models.Device
 
-	err := r.db.QueryRowContext(ctx, query, piID, deviceID).Scan(&device.PiID, &device.DeviceID, &device.DeviceType, &device.CreatedAt, &metaJSON)
+	err := r.db.QueryRowContext(ctx, query, piID, deviceID).Scan(&device.PiID, &device.DeviceID, &device.DeviceType, &device.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, sql.ErrNoRows
@@ -51,16 +44,12 @@ func (r *PostgresDeviceRepository) GetDevice(ctx context.Context, piID string, d
 		return nil, err
 	}
 
-	if err := json.Unmarshal(metaJSON, &device.Meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
-	}
-
 	return &device, nil
 }
 
 func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID string, page, pageSize int) (*interfaces.PaginationResult, error) {
 	offset := (page - 1) * pageSize
-	query := `SELECT pi_id, device_id, device_type, created_at, meta FROM devices WHERE pi_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT pi_id, device_id, device_type, created_at FROM devices WHERE pi_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.QueryContext(ctx, query, piID, pageSize, offset)
 	if err != nil {
@@ -68,17 +57,12 @@ func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID str
 	}
 	defer rows.Close()
 
-	var devices []mqtmodels.Device
+	var devices []hardware_models.Device
 	for rows.Next() {
-		var device mqtmodels.Device
-		var metaJSON []byte
+		var device hardware_models.Device
 
-		if err := rows.Scan(&device.PiID, &device.DeviceID, &device.DeviceType, &device.CreatedAt, &metaJSON); err != nil {
+		if err := rows.Scan(&device.PiID, &device.DeviceID, &device.DeviceType, &device.CreatedAt); err != nil {
 			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &device.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
 		}
 
 		devices = append(devices, device)
@@ -102,19 +86,14 @@ func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID str
 }
 
 // Update device
-func (r *PostgresDeviceRepository) UpdateDevice(ctx context.Context, device mqtmodels.Device) error {
+func (r *PostgresDeviceRepository) UpdateDevice(ctx context.Context, device hardware_models.Device) error {
 	query := `
 		UPDATE devices 
-		SET meta = $1 
+		SET device_type = $1 
 		WHERE pi_id = $2 AND device_id = $3
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(device.Meta))
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	result, err := r.db.ExecContext(ctx, query, metaJSON, device.PiID, device.DeviceID)
+	result, err := r.db.ExecContext(ctx, query, device.DeviceType, device.PiID, device.DeviceID)
 	if err != nil {
 		return err
 	}

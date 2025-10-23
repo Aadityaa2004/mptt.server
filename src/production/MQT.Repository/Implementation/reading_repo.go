@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
@@ -22,13 +22,13 @@ func NewPostgresReadingRepository(db *sql.DB) *PostgresReadingRepository {
 }
 
 // Reading operations
-func (r *PostgresReadingRepository) CreateReading(ctx context.Context, reading mqtmodels.Reading) error {
+func (r *PostgresReadingRepository) CreateReading(ctx context.Context, reading hardware_models.Reading) error {
 	query := `
         INSERT INTO readings (pi_id, device_id, ts, payload) 
         VALUES ($1, $2, $3, $4)
     `
 
-	payloadJSON, err := json.Marshal(ensureMetaNotNull(reading.Payload))
+	payloadJSON, err := json.Marshal(reading.Payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
@@ -37,7 +37,7 @@ func (r *PostgresReadingRepository) CreateReading(ctx context.Context, reading m
 	return err
 }
 
-func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings []mqtmodels.Reading) error {
+func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings []hardware_models.Reading) error {
 	if len(readings) == 0 {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings
 		valueStrings[i] = fmt.Sprintf("($%d, $%d, $%d, $%d)",
 			i*4+1, i*4+2, i*4+3, i*4+4)
 
-		payloadJSON, err := json.Marshal(ensureMetaNotNull(reading.Payload))
+		payloadJSON, err := json.Marshal(reading.Payload)
 		if err != nil {
 			return fmt.Errorf("failed to marshal payload: %w", err)
 		}
@@ -80,11 +80,11 @@ func (r *PostgresReadingRepository) CreateReadings(ctx context.Context, readings
 	return txn.Commit()
 }
 
-func (r *PostgresReadingRepository) scanReadings(rows *sql.Rows) ([]mqtmodels.Reading, error) {
-	var readings []mqtmodels.Reading
+func (r *PostgresReadingRepository) scanReadings(rows *sql.Rows) ([]hardware_models.Reading, error) {
+	var readings []hardware_models.Reading
 
 	for rows.Next() {
-		var reading mqtmodels.Reading
+		var reading hardware_models.Reading
 		var payloadJSON []byte
 
 		if err := rows.Scan(&reading.PiID, &reading.DeviceID, &reading.Ts, &payloadJSON); err != nil {
@@ -110,7 +110,7 @@ func (r *PostgresReadingRepository) DeleteReadingsByTimeRange(ctx context.Contex
 
 // Enhanced methods for new interface
 
-func (r *PostgresReadingRepository) GetLatestReadings(ctx context.Context, piID string) ([]mqtmodels.Reading, error) {
+func (r *PostgresReadingRepository) GetLatestReadings(ctx context.Context, piID string) ([]hardware_models.Reading, error) {
 	query := `
 		SELECT DISTINCT ON (device_id) pi_id, device_id, ts, payload 
 		FROM readings 

@@ -1,30 +1,212 @@
 # MPT.MQTT_Server
 
-This server is designed for high performance MQTT data ingestion. It is built in GO and capable of handling requests from MQTT Brokers and also responsible for making pushes to the database. This service is specifically designed for IoT applications and supports both development and production environments. 
+A **true microservice architecture** for high-performance MQTT data ingestion with Role-Based Access Control (RBAC). Built in Go, this system handles IoT sensor data from MQTT brokers and provides a complete REST API for data management. Specifically designed for IoT applications, particularly maple syrup farm monitoring systems, with support for both development and production environments.
 
-## Architecture
+## 🏗️ **Microservice Architecture Overview**
+
+This system follows **proper microservice principles** with complete decoupling and service independence. Each service has a single responsibility and communicates via well-defined APIs.
+
+## 🔐 Authentication & Authorization
+
+The system uses a simplified RBAC approach with only two roles:
+
+### **Admin Role**
+- Full CRUD access to all resources (users, PIs, devices, readings)
+- Can create/update/delete any user
+- Can assign/change user roles
+- Can create/manage PIs and assign them to users
+- Can create/manage devices
+- Can view all readings
+
+### **User Role**
+- Read-only access to their assigned resources
+- Can view PIs assigned to them (`pis.user_id = user.user_id`)
+- Can view devices connected to their PIs
+- Can view readings from their devices
+- Can view/update their own profile
+
+### **Token System**
+- **Access Token**: Contains `user_id`, `role`, `token_id`, and standard JWT claims
+- **Refresh Token**: Used to generate new access tokens
+- **No Permission Tokens**: Simplified to role-based authorization only
+- **Token Expiration**: Old tokens remain valid until natural expiration 
+
+## 📊 **Current Services (5 Microservices + Infrastructure)**
+
+### **1. MQTT Ingestor Service** (`mqtt-ingestor`)
+- **Port**: 9003
+- **Purpose**: Pure data ingestion from MQTT
+- **Responsibilities**:
+  - Subscribe to MQTT broker (`sensors/#` topics)
+  - Receive sensor readings from devices
+  - Validate Pi/Device existence via API calls
+  - Store readings via API calls
+  - **NO direct database access**
+  - Publish error messages back to MQTT
+  - Health check endpoint
+
+### **2. API Service** (`api-service`) 
+- **Port**: 9002
+- **Purpose**: Single source of truth for all data operations
+- **Responsibilities**:
+  - All REST API endpoints (users, pis, devices, readings)
+  - JWT authentication & RBAC
+  - **ALL database operations** (only service that touches PostgreSQL)
+  - Internal API endpoints for ingestor service
+  - User management and authentication
+  - Health check endpoints
+
+### **3. MQTT Bridge** (`mqtt-bridge`)
+- **Purpose**: External broker connectivity
+- **Responsibilities**:
+  - Forward messages from external MQTT broker to internal broker
+  - Bridge between external sensors and internal system
+  - Topic filtering and message routing
+
+### **4. MQTT Broker** (`mosquitto`)
+- **Ports**: 1883 (MQTT), 8883 (TLS), 9001 (WebSocket), 9443 (WebSocket TLS)
+- **Purpose**: Internal MQTT message broker
+- **Responsibilities**:
+  - Message routing and pub/sub
+  - Message persistence
+  - TLS/SSL support
+
+### **5. PostgreSQL Database** (`postgres`)
+- **Port**: 5432
+- **Purpose**: Data persistence
+- **Responsibilities**:
+  - Store all application data
+  - **Only accessed by API Service**
+
+## 🔄 **Complete Data Flow**
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   IoT Devices   │───▶│  MQTT Broker    │───▶│  Go Ingestor    │
-│   (Sensors)     │    │  (Mosquitto)    │    │   Service       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        ▼
-                                               ┌─────────────────┐
-                                               │     SQL         │
-                                               │   Database      │
-                                               └─────────────────┘
+External Sensors → MQTT Bridge → Internal MQTT Broker → MQTT Ingestor → API Service → PostgreSQL
+                                                                        ↑
+External Users ← REST API ← API Service ← JWT Authentication ← External Users
 ```
+
+### **Detailed Flow:**
+
+1. **Sensor Data Ingestion**:
+   ```
+   Raspberry Pi Sensors → External MQTT Broker → MQTT Bridge → Internal Mosquitto → MQTT Ingestor Service
+   ```
+
+2. **Data Processing**:
+   ```
+   MQTT Ingestor → HTTP API Call → API Service → PostgreSQL
+   ```
+
+3. **User Access**:
+   ```
+   Web/Mobile App → REST API → API Service → PostgreSQL
+   ```
+
+## 🔐 **Authentication & Authorization**
+
+### **Two Types of Authentication:**
+
+1. **User Authentication** (API Service):
+   - JWT tokens for web/mobile users
+   - Username/password login
+   - Role-based access control (RBAC)
+   - Admin user management
+
+2. **Service-to-Service Authentication** (Internal):
+   - Bearer token authentication
+   - `INTERNAL_API_SECRET` for ingestor ↔ API communication
+   - No user credentials needed
+
+## 🎯 **Key Microservice Principles Achieved**
+
+### **✅ Service Independence**
+- Each service has its own responsibility
+- Services can be deployed independently
+- No shared code except data models
+
+### **✅ Database per Service**
+- Only API Service accesses PostgreSQL
+- Ingestor Service has no database dependencies
+- Clear data ownership
+
+### **✅ API-First Communication**
+- Services communicate via HTTP APIs
+- No direct database sharing
+- Well-defined service contracts
+
+### **✅ Fault Tolerance**
+- Circuit breaker pattern in API client
+- Retry logic with exponential backoff
+- Graceful degradation
+
+### **✅ Independent Scaling**
+- Scale ingestor for high MQTT throughput
+- Scale API for high HTTP traffic
+- Different resource requirements
+
+## 🚫 **What's NOT There (Clarifying Confusion)**
+
+### **No "Auth Service"**
+There is **NO separate auth service**. Authentication is handled by the **API Service** itself. The API Service includes:
+- JWT token generation and validation
+- User management
+- Role-based access control
+- Login/logout endpoints
+
+### **No Separate Database Services**
+There is **NO separate database service**. PostgreSQL is just infrastructure, and only the API Service accesses it.
+
+## 📋 **Service Communication Matrix**
+
+| Service | Communicates With | Method | Purpose |
+|---------|------------------|--------|---------|
+| MQTT Ingestor | API Service | HTTP POST | Validate Pi/Device, Create readings |
+| MQTT Ingestor | MQTT Broker | MQTT | Subscribe to topics, publish errors |
+| MQTT Bridge | External Broker | MQTT | Forward messages from external sensors |
+| MQTT Bridge | Internal Broker | MQTT | Forward messages to internal system |
+| API Service | PostgreSQL | SQL | All database operations |
+| External Users | API Service | HTTP | User authentication, data access |
+
+## 🎉 **Why This IS True Microservice Architecture**
+
+1. **Single Responsibility**: Each service has one clear purpose
+2. **Loose Coupling**: Services communicate via APIs, not shared databases
+3. **High Cohesion**: Related functionality is grouped together
+4. **Independent Deployment**: Services can be deployed separately
+5. **Technology Agnostic**: Services could use different technologies
+6. **Fault Isolation**: Failure in one service doesn't crash others
+7. **Scalability**: Each service can be scaled independently
+
+The architecture is now properly decoupled and follows microservice best practices! 🚀
 
 ## Features
 
-- **MQTT Data Ingestion**: Subscribes to MQTT topics and processes sensor data
-- **Batch Processing**: Efficiently batches data for optimal database performance
-- **Health Monitoring**: HTTP endpoints for service health checks
-- **Docker Support**: Complete containerization for easy deployment
+### **🏗️ Microservice Architecture**
+- **True Service Independence**: Each service has a single responsibility
+- **API-First Communication**: Services communicate via HTTP APIs
+- **Database per Service**: Clear data ownership and boundaries
+- **Independent Deployment**: Services can be deployed separately
+- **Fault Tolerance**: Circuit breaker and retry patterns
+
+### **🔐 Authentication & Security**
+- **Simplified RBAC**: Two-role system (admin/user) with clear permissions
+- **JWT Authentication**: Secure token-based authentication with refresh tokens
+- **Service-to-Service Auth**: Internal API authentication with shared secrets
 - **TLS Support**: Secure MQTT connections with certificate validation
-- **Scalable Architecture**: Support for shared consumer groups
+
+### **📡 MQTT & Data Processing**
+- **MQTT Data Ingestion**: Subscribes to MQTT topics and processes sensor data
+- **Batch Processing**: Efficiently batches data for optimal performance
+- **External Broker Bridge**: Connects to external MQTT brokers
+- **Error Handling**: Publishes error messages back to MQTT topics
+
+### **🔧 Operations & Monitoring**
+- **Health Monitoring**: HTTP endpoints for service health checks
+- **Circuit Breaker Status**: Real-time monitoring of service resilience
+- **Docker Support**: Complete containerization for easy deployment
+- **Scalable Architecture**: Independent scaling of services
+- **Maple Syrup Farm Ready**: Designed for IoT monitoring of maple syrup production
 
 ## Quick Start
 
@@ -57,52 +239,315 @@ This server is designed for high performance MQTT data ingestion. It is built in
 
 4. **Check service health**
    ```bash
-   curl http://localhost:9002/health
+   # API Service (includes authentication)
+   curl http://localhost:9002/health/live
+   
+   # MQTT Ingestor Service
+   curl http://localhost:9003/health
    ```
 
-5. **View logs**
+5. **Test authentication**
    ```bash
-   docker-compose logs -f ingestor
+   # Login as admin (default credentials)
+   curl -X POST http://localhost:9002/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username": "admin", "password": "adminpassword123"}'
+   ```
+
+6. **View logs**
+   ```bash
+   docker-compose logs -f api-service
+   docker-compose logs -f mqtt-ingestor
+   docker-compose logs -f mqtt-bridge
    ```
 
 ## Data Model
 
-### Reading Document Structure
+### **Database Schema (PostgreSQL)**
 
+#### **Users Table**
+```sql
+CREATE TABLE users (
+    user_id     TEXT PRIMARY KEY,
+    username    TEXT NOT NULL UNIQUE,
+    email       TEXT NOT NULL UNIQUE,
+    password    TEXT NOT NULL,
+    role        TEXT NOT NULL,  -- 'admin' or 'user'
+    active      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### **Roles Table**
+```sql
+CREATE TABLE roles (
+    role_id     TEXT PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### **PIs Table**
+```sql
+CREATE TABLE pis (
+    pi_id       TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    location    TEXT,
+    user_id     TEXT NOT NULL,  -- Foreign key to users
+    active      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### **Devices Table**
+```sql
+CREATE TABLE devices (
+    device_id   TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    type        TEXT NOT NULL,
+    pi_id       TEXT NOT NULL,  -- Foreign key to pis
+    active      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### **Readings Table**
+```sql
+CREATE TABLE readings (
+    reading_id  TEXT PRIMARY KEY,
+    device_id   TEXT NOT NULL,  -- Foreign key to devices
+    value       DECIMAL NOT NULL,
+    unit        TEXT NOT NULL,
+    timestamp   TIMESTAMPTZ NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### **Authentication Response Structure**
+
+#### **Login Response**
 ```json
 {
-  "_id": "ObjectId",
-  "topic": "sensors/device001/temperature",
-  "device_id": "device001",
-  "payload": {
-    "temperature": 23.5,
-    "unit": "celsius",
-    "timestamp": 1640995200
-  },
-  "received_at": "2023-12-31T12:00:00Z"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_id": "uuid-string",
+  "expires_at": 1761176384,
+  "user_id": "user-uuid",
+  "username": "admin",
+  "email": "admin@example.com",
+  "role": "admin"
+}
+```
+
+#### **User Registration Response**
+```json
+{
+  "id": "user-uuid",
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "role": "user"
 }
 ```
 
 ## API Endpoints
 
-### Health Check
-- **GET** `/health` - Service health status
-- **Response**: `{"status": "ok"}`
+### **API Service** (Port 9002) - Single Service for All Operations
+
+#### **Health & Monitoring**
+- **GET** `/health/live` - Service liveness check
+- **GET** `/health/ready` - Service readiness check
+- **GET** `/metrics` - Service metrics
+- **GET** `/stats/summary` - System statistics
+
+#### **Authentication & User Management**
+- **POST** `/api/auth/login` - User login
+- **POST** `/api/auth/register` - User registration
+- **GET** `/api/auth/profile` - Get user profile
+- **POST** `/api/auth/refresh` - Refresh access token
+- **POST** `/api/auth/logout` - User logout
+- **GET** `/api/users` - Get all users (Admin only)
+- **GET** `/api/users/{id}` - Get user by ID
+- **PUT** `/api/users/{id}` - Update user
+- **PUT** `/api/users/{id}/role` - Update user role (Admin only)
+- **DELETE** `/api/users/{id}` - Delete user (Admin only)
+
+#### **PI Management**
+- **POST** `/api/pis` - Create PI (Admin only)
+- **GET** `/api/pis` - Get PIs (Admin: all, User: assigned)
+- **GET** `/api/pis/{id}` - Get PI details
+- **PUT** `/api/pis/{id}` - Update PI (Admin only)
+- **DELETE** `/api/pis/{id}` - Delete PI (Admin only)
+
+#### **Device Management**
+- **POST** `/api/pis/{pi_id}/devices` - Create device (Admin only)
+- **GET** `/api/pis/{pi_id}/devices` - Get devices (Admin: all, User: from assigned PIs)
+- **GET** `/api/pis/{pi_id}/devices/{device_id}` - Get device details
+- **PUT** `/api/pis/{pi_id}/devices/{device_id}` - Update device (Admin only)
+- **DELETE** `/api/pis/{pi_id}/devices/{device_id}` - Delete device (Admin only)
+
+#### **Reading Management**
+- **POST** `/api/readings` - Create reading (Admin only)
+- **GET** `/api/readings` - Get readings (Admin: all, User: from assigned devices)
+- **GET** `/api/readings/latest?pi_id={id}` - Get latest readings
+- **GET** `/api/readings/pis/{pi_id}/devices/{device_id}` - Get device readings
+
+#### **Internal API Endpoints** (Service-to-Service)
+- **POST** `/internal/pis/validate` - Validate Pi exists (Ingestor → API)
+- **POST** `/internal/devices/validate` - Validate Device exists (Ingestor → API)
+- **POST** `/internal/readings` - Create readings (Ingestor → API)
+
+### **MQTT Ingestor Service** (Port 9003) - Health Only
+- **GET** `/health` - Service health with circuit breaker status
 
 ## Docker Services
 
-### MQTT Broker (Mosquitto)
+### **MQTT Broker (Mosquitto)**
 - **Image**: `eclipse-mosquitto:2`
-- **Port**: 1883 (dev), 8883 (prod with TLS)
+- **Ports**: 1883 (MQTT), 8883 (TLS), 9001 (WebSocket), 9443 (WebSocket TLS)
 - **Configuration**: Supports both anonymous and authenticated connections
+- **Purpose**: Internal MQTT message broker
 
+### **MQTT Bridge**
+- **Build**: Python-based bridge service
+- **Base Image**: `python:3.11-alpine`
+- **Purpose**: Forward messages from external MQTT broker to internal broker
+- **Features**: Topic filtering, message routing, external broker connectivity
 
-### Ingestor Service
+### **API Service** (Port 9002)
 - **Build**: Multi-stage Go build
 - **Base Image**: `gcr.io/distroless/base-debian12`
-- **Port**: 9002 (HTTP health endpoint)
+- **Purpose**: Single source of truth for all data operations
+- **Features**: 
+  - JWT authentication & RBAC
+  - All REST API endpoints
+  - Database operations
+  - Internal API endpoints for ingestor
+  - Health monitoring
 
-### Testing
+### **MQTT Ingestor Service** (Port 9003)
+- **Build**: Multi-stage Go build
+- **Base Image**: `gcr.io/distroless/base-debian12`
+- **Purpose**: Pure MQTT data ingestion
+- **Features**:
+  - MQTT subscription and processing
+  - API client with circuit breaker
+  - Batch processing
+  - Error publishing to MQTT
+  - Health monitoring with circuit breaker status
+
+### **PostgreSQL Database**
+- **Image**: `postgres:15`
+- **Port**: 5432
+- **Purpose**: Data persistence
+- **Access**: Only by API Service
+
+## 🔧 **Resilience & Circuit Breaker**
+
+### **Circuit Breaker Pattern**
+The MQTT Ingestor Service implements a circuit breaker pattern for resilience:
+
+- **States**: Closed (normal), Open (failing), Half-Open (testing)
+- **Failure Threshold**: 5 consecutive failures
+- **Reset Timeout**: 30 seconds
+- **Retry Logic**: Exponential backoff (1s, 2s, 4s, 8s)
+
+### **Health Check with Circuit Breaker Status**
+```bash
+curl http://localhost:9003/health
+```
+
+**Response Example**:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-10-23T04:09:48Z",
+  "services": {
+    "mqtt": "connected",
+    "api_service": "connected"
+  },
+  "circuit_breaker": {
+    "state": "closed",
+    "failure_count": 0
+  }
+}
+```
+
+### **Fault Tolerance Features**
+- **Automatic Retry**: Failed API calls are retried with exponential backoff
+- **Circuit Breaking**: Prevents cascading failures when API service is down
+- **Graceful Degradation**: Ingestor continues to receive MQTT messages even if API is unavailable
+- **Error Publishing**: Failed readings are published to MQTT error topics for device feedback
+
+## 🧪 Testing
+
+## 🎯 **Microservice Architecture Benefits**
+
+### **Development Benefits**
+- **Independent Development**: Teams can work on services independently
+- **Technology Diversity**: Each service can use different technologies
+- **Faster Deployment**: Deploy only the services that changed
+- **Easier Testing**: Test services in isolation
+
+### **Operational Benefits**
+- **Independent Scaling**: Scale services based on their specific needs
+- **Fault Isolation**: Failure in one service doesn't crash others
+- **Resource Optimization**: Allocate resources based on service requirements
+- **Easier Maintenance**: Update services without affecting others
+
+### **Business Benefits**
+- **Faster Time to Market**: Deploy features independently
+- **Better Reliability**: Circuit breakers prevent cascading failures
+- **Cost Optimization**: Scale only what you need
+- **Future-Proof**: Easy to add new services or modify existing ones
+
+## 🧪 **Testing**
+
+### **Service Health Testing**
+```bash
+# Test API Service
+curl http://localhost:9002/health/live
+
+# Test MQTT Ingestor Service (with circuit breaker status)
+curl http://localhost:9003/health
+
+# Test MQTT Bridge
+docker-compose logs mqtt-bridge
+```
+
+### **End-to-End Flow Testing**
+```bash
+# 1. Send MQTT message
+docker exec mqtt-broker mosquitto_pub -h localhost -t "sensors/pi_001/1/temperature" -m '{"temperature": 26.0, "humidity": 65.0, "timestamp": "2025-10-23T04:10:00Z"}'
+
+# 2. Check ingestor logs
+docker logs mqtt-ingestor --tail 5
+
+# 3. Test API authentication
+curl -X POST http://localhost:9002/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "adminpassword123"}'
+```
+
+### **Circuit Breaker Testing**
+```bash
+# Stop API service to test circuit breaker
+docker-compose stop api-service
+
+# Send MQTT messages (should trigger circuit breaker)
+docker exec mqtt-broker mosquitto_pub -h localhost -t "sensors/pi_001/1/temperature" -m '{"temperature": 26.0}'
+
+# Check circuit breaker status
+curl http://localhost:9003/health
+
+# Restart API service
+docker-compose start api-service
+```
+
+### **Manual Testing**
 
 - **make test-mqtt** 
 
@@ -208,7 +653,12 @@ To see the actual data:
 2. Navigate to your `readings` table (see Part 2, Step 6)
 3. You should see your test message data in the table!
 
----
+
+
+
+
+
+--- 
 
 ## 🔍 **Understanding Your Data Structure**
 
@@ -232,5 +682,47 @@ Pi pi_001 → Device "temperature" → Reading {"value": 22.5, "unit": "celsius"
 Pi pi_001 → Device "humidity" → Reading {"value": 65, "unit": "percent"}
 Pi pi_002 → Device "pressure" → Reading {"value": 1013.25, "unit": "hPa"}
 ```
+
+---
+
+## 🔍 **API Endpoints**
+
+| Controller | Endpoint | Method | Access | Description |
+|------------|----------|--------|--------|-------------|
+| **auth_controller.go** | | | | **Authentication endpoints** |
+| | `/api/auth/register` | POST | Public | User registration (user role forced) |
+| | `/api/auth/login` | POST | Public | User login |
+| | `/api/auth/refresh` | POST | Public | Refresh token |
+| | `/api/auth/logout` | POST | Public | User logout |
+| | `/api/auth/profile` | GET | Authenticated | Get own profile |
+| | `/api/auth/profile` | PATCH | Authenticated | Update own profile (username, email, password) |
+| | `/api/auth/register/admin` | POST | Admin only | Admin registration |
+| **user_controller.go** | | | | **User management** |
+| | `/api/users` | GET | Admin only | List all users |
+| | `/api/users/:id` | GET | Admin or Owner | View user details |
+| | `/api/users/:id` | PUT | Admin only | Update any user |
+| | `/api/users/:id` | DELETE | Admin only | Hard delete user |
+| | `/api/users/:id/role` | PUT | Admin only | Change user role |
+| **pi_controller.go** | | | | **Pi management** |
+| | `/pis` | POST | Admin only | Create pi, assign to user |
+| | `/pis` | GET | Admin: all PIs<br>User: only their assigned PIs | List PIs |
+| | `/pis/:pi_id` | GET | Admin: any PI<br>User: only their assigned PI | Get PI details |
+| | `/pis/:pi_id` | PATCH | Admin only | Update pi, reassign user |
+| | `/pis/:pi_id` | DELETE | Admin only | Delete pi |
+| **device_controller.go** | | | | **Device management** |
+| | `/pis/:pi_id/devices` | POST | Admin only | Create device |
+| | `/pis/:pi_id/devices` | GET | Admin: all devices<br>User: devices on their PI | List devices |
+| | `/pis/:pi_id/devices/:device_id` | GET | Admin: any device<br>User: device on their PI | Get device details |
+| | `/pis/:pi_id/devices/:device_id` | PATCH | Admin only | Update device |
+| | `/pis/:pi_id/devices/:device_id` | DELETE | Admin only | Delete device |
+| **reading_controller.go** | | | | **Reading management** |
+| | `/readings/latest?pi_id=X` | GET | Admin: any PI<br>User: their PI only | Get latest readings |
+| | `/readings?pi_id=X` | GET | Admin: any PI<br>User: their PI only | Get readings |
+| | `/readings/pis/:pi_id/devices/:device_id` | GET | Admin: any device<br>User: device on their PI | Get device readings |
+| **health_controller.go** | | | | **Health and stats** |
+| | `/health/live` | GET | Public | Liveness check |
+| | `/health/ready` | GET | Public | Readiness check |
+| | `/metrics` | GET | Public | Metrics endpoint |
+| | `/stats/summary` | GET | Admin: all stats<br>User: stats for their resources only | System statistics |
 
 ---

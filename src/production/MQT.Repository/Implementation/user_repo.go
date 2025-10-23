@@ -3,10 +3,11 @@ package implementation
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"time"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	"github.com/google/uuid"
+	auth_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/auth"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
@@ -19,31 +20,39 @@ func NewPostgresUserRepository(db *sql.DB) *PostgresUserRepository {
 }
 
 // Create user
-func (r *PostgresUserRepository) CreateUser(ctx context.Context, user mqtmodels.User) error {
+func (r *PostgresUserRepository) Create(ctx context.Context, user *auth_models.User) (*auth_models.User, error) {
+	if user.UserID == "" {
+		user.UserID = uuid.New().String()
+	}
+	user.CreatedAt = time.Now()
+	user.UpdatedAt = time.Now()
+
 	query := `
-		INSERT INTO users (user_id, name, role, created_at, meta) 
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (user_id, username, email, password, role, active, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (user_id) 
-		DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, meta = EXCLUDED.meta
+		DO UPDATE SET username = EXCLUDED.username, email = EXCLUDED.email, password = EXCLUDED.password, 
+		              role = EXCLUDED.role, active = EXCLUDED.active, 
+		              updated_at = EXCLUDED.updated_at
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(user.Meta))
+	_, err := r.db.ExecContext(ctx, query, user.UserID, user.Username, user.Email,
+		user.Password, user.Role, user.Active, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
+		return nil, err
 	}
 
-	_, err = r.db.ExecContext(ctx, query, user.UserID, user.Name, user.Role, user.CreatedAt, metaJSON)
-	return err
+	return user, nil
 }
 
 // Read users
-func (r *PostgresUserRepository) GetUser(ctx context.Context, userID string) (*mqtmodels.User, error) {
-	query := `SELECT user_id, name, role, created_at, meta FROM users WHERE user_id = $1`
+func (r *PostgresUserRepository) GetByID(ctx context.Context, userID string) (*auth_models.User, error) {
+	query := `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users WHERE user_id = $1`
 
-	var user mqtmodels.User
-	var metaJSON []byte
+	var user auth_models.User
 
-	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.UserID, &user.Name, &user.Role, &user.CreatedAt, &metaJSON)
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.UserID, &user.Username, &user.Email,
+		&user.Password, &user.Role, &user.Active, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -51,23 +60,74 @@ func (r *PostgresUserRepository) GetUser(ctx context.Context, userID string) (*m
 		return nil, err
 	}
 
-	if err := json.Unmarshal(metaJSON, &user.Meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
+	return &user, nil
+}
+
+// FindByID is an alias for GetByID for backward compatibility
+func (r *PostgresUserRepository) FindByID(ctx context.Context, userID string) (*auth_models.User, error) {
+	return r.GetByID(ctx, userID)
+}
+
+// GetUser is an alias for GetByID for backward compatibility
+func (r *PostgresUserRepository) GetUser(ctx context.Context, userID string) (*auth_models.User, error) {
+	return r.GetByID(ctx, userID)
+}
+
+func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*auth_models.User, error) {
+	query := `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users WHERE username = $1`
+
+	var user auth_models.User
+
+	err := r.db.QueryRowContext(ctx, query, username).Scan(&user.UserID, &user.Username, &user.Email,
+		&user.Password, &user.Role, &user.Active, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	return &user, nil
 }
 
-func (r *PostgresUserRepository) ListUsers(ctx context.Context, page, pageSize int, role string) (*interfaces.PaginationResult, error) {
+func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.User, error) {
+	query := `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users ORDER BY created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*auth_models.User
+	for rows.Next() {
+		var user auth_models.User
+
+		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
+			&user.Password, &user.Role, &user.Active, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			return nil, err
+		}
+
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, role string) (*interfaces.PaginationResult, error) {
 	offset := (page - 1) * pageSize
 	var query string
 	var args []interface{}
 
 	if role != "" {
-		query = `SELECT user_id, name, role, created_at, meta FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		query = `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 		args = []interface{}{role, pageSize, offset}
 	} else {
-		query = `SELECT user_id, name, role, created_at, meta FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		query = `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 		args = []interface{}{pageSize, offset}
 	}
 
@@ -77,17 +137,13 @@ func (r *PostgresUserRepository) ListUsers(ctx context.Context, page, pageSize i
 	}
 	defer rows.Close()
 
-	var users []mqtmodels.User
+	var users []auth_models.User
 	for rows.Next() {
-		var user mqtmodels.User
-		var metaJSON []byte
+		var user auth_models.User
 
-		if err := rows.Scan(&user.UserID, &user.Name, &user.Role, &user.CreatedAt, &metaJSON); err != nil {
+		if err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password,
+			&user.Role, &user.Active, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &user.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
 		}
 
 		users = append(users, user)
@@ -111,19 +167,17 @@ func (r *PostgresUserRepository) ListUsers(ctx context.Context, page, pageSize i
 }
 
 // Update user
-func (r *PostgresUserRepository) UpdateUser(ctx context.Context, user mqtmodels.User) error {
+func (r *PostgresUserRepository) Update(ctx context.Context, user *auth_models.User) error {
+	user.UpdatedAt = time.Now()
+
 	query := `
 		UPDATE users 
-		SET name = $1, role = $2, meta = $3 
-		WHERE user_id = $4
+		SET username = $1, email = $2, password = $3, role = $4, active = $5, updated_at = $6 
+		WHERE user_id = $7
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(user.Meta))
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	result, err := r.db.ExecContext(ctx, query, user.Name, user.Role, metaJSON, user.UserID)
+	result, err := r.db.ExecContext(ctx, query, user.Username, user.Email, user.Password,
+		user.Role, user.Active, user.UpdatedAt, user.UserID)
 	if err != nil {
 		return err
 	}
@@ -140,14 +194,44 @@ func (r *PostgresUserRepository) UpdateUser(ctx context.Context, user mqtmodels.
 	return nil
 }
 
+// GetByRole retrieves users by role
+func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]*auth_models.User, error) {
+	query := `SELECT user_id, username, email, password, role, active, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*auth_models.User
+	for rows.Next() {
+		var user auth_models.User
+
+		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
+			&user.Password, &user.Role, &user.Active,
+			&user.CreatedAt, &user.UpdatedAt); err != nil {
+			return nil, err
+		}
+
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // Delete user
-func (r *PostgresUserRepository) DeleteUser(ctx context.Context, userID string, hardDelete bool) error {
+func (r *PostgresUserRepository) Delete(ctx context.Context, userID string, hardDelete bool) error {
 	var query string
 	if hardDelete {
 		query = `DELETE FROM users WHERE user_id = $1`
 	} else {
-		// Soft delete - you might want to add a deleted_at column
-		query = `UPDATE users SET role = 'deleted' WHERE user_id = $1`
+		// Soft delete - set active to false
+		query = `UPDATE users SET active = false, updated_at = now() WHERE user_id = $1`
 	}
 
 	result, err := r.db.ExecContext(ctx, query, userID)

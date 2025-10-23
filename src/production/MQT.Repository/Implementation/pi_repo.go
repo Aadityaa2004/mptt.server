@@ -3,10 +3,9 @@ package implementation
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
@@ -19,40 +18,30 @@ func NewPostgresPiRepository(db *sql.DB) *PostgresPiRepository {
 }
 
 // Create pi (idempotent upsert)
-func (r *PostgresPiRepository) CreateOrUpdatePi(ctx context.Context, pi mqtmodels.Pi) error {
+func (r *PostgresPiRepository) CreateOrUpdatePi(ctx context.Context, pi hardware_models.Pi) error {
 	query := `
-		INSERT INTO pis (pi_id, user_id, created_at, meta) 
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO pis (pi_id, user_id, created_at) 
+		VALUES ($1, $2, $3)
 		ON CONFLICT (pi_id) 
-		DO UPDATE SET user_id = EXCLUDED.user_id, meta = EXCLUDED.meta
+		DO UPDATE SET user_id = EXCLUDED.user_id
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(pi.Meta))
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, pi.PiID, pi.UserID, pi.CreatedAt, metaJSON)
+	_, err := r.db.ExecContext(ctx, query, pi.PiID, pi.UserID, pi.CreatedAt)
 	return err
 }
 
 // Read pis
-func (r *PostgresPiRepository) GetPi(ctx context.Context, piID string) (*mqtmodels.Pi, error) {
-	query := `SELECT pi_id, user_id, created_at, meta FROM pis WHERE pi_id = $1`
+func (r *PostgresPiRepository) GetPi(ctx context.Context, piID string) (*hardware_models.Pi, error) {
+	query := `SELECT pi_id, user_id, created_at FROM pis WHERE pi_id = $1`
 
-	var pi mqtmodels.Pi
-	var metaJSON []byte
+	var pi hardware_models.Pi
 
-	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt, &metaJSON)
+	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
-	}
-
-	if err := json.Unmarshal(metaJSON, &pi.Meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
 	}
 
 	return &pi, nil
@@ -64,10 +53,10 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 	var args []interface{}
 
 	if userID != "" {
-		query = `SELECT pi_id, user_id, created_at, meta FROM pis WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		query = `SELECT pi_id, user_id, created_at FROM pis WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 		args = []interface{}{userID, pageSize, offset}
 	} else {
-		query = `SELECT pi_id, user_id, created_at, meta FROM pis ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		query = `SELECT pi_id, user_id, created_at FROM pis ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 		args = []interface{}{pageSize, offset}
 	}
 
@@ -77,17 +66,12 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 	}
 	defer rows.Close()
 
-	var pis []mqtmodels.Pi
+	var pis []hardware_models.Pi
 	for rows.Next() {
-		var pi mqtmodels.Pi
-		var metaJSON []byte
+		var pi hardware_models.Pi
 
-		if err := rows.Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt, &metaJSON); err != nil {
+		if err := rows.Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt); err != nil {
 			return nil, err
-		}
-
-		if err := json.Unmarshal(metaJSON, &pi.Meta); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal meta: %w", err)
 		}
 
 		pis = append(pis, pi)
@@ -111,19 +95,14 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 }
 
 // Update pi
-func (r *PostgresPiRepository) UpdatePi(ctx context.Context, pi mqtmodels.Pi) error {
+func (r *PostgresPiRepository) UpdatePi(ctx context.Context, pi hardware_models.Pi) error {
 	query := `
 		UPDATE pis 
-		SET user_id = $1, meta = $2 
-		WHERE pi_id = $3
+		SET user_id = $1 
+		WHERE pi_id = $2
 	`
 
-	metaJSON, err := json.Marshal(ensureMetaNotNull(pi.Meta))
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta: %w", err)
-	}
-
-	result, err := r.db.ExecContext(ctx, query, pi.UserID, metaJSON, pi.PiID)
+	result, err := r.db.ExecContext(ctx, query, pi.UserID, pi.PiID)
 	if err != nil {
 		return err
 	}

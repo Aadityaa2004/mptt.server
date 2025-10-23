@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 )
 
 // ReadingQueryParams represents parameters for reading queries
@@ -19,7 +19,7 @@ type ReadingQueryParams struct {
 
 // ReadingQueryResult represents the result of a reading query with pagination
 type ReadingQueryResult struct {
-	Items         []mqtmodels.Reading `json:"items"`
+	Items         []hardware_models.Reading `json:"items"`
 	NextPageToken *string             `json:"next_page_token,omitempty"`
 	Total         int                 `json:"total,omitempty"`
 }
@@ -43,11 +43,11 @@ type DeviceStats struct {
 
 type ReadingRepository interface {
 	// Reading operations
-	CreateReading(ctx context.Context, reading mqtmodels.Reading) error
-	CreateReadings(ctx context.Context, readings []mqtmodels.Reading) error
+	CreateReading(ctx context.Context, reading hardware_models.Reading) error
+	CreateReadings(ctx context.Context, readings []hardware_models.Reading) error
 
 	// Query operations with pagination
-	GetLatestReadings(ctx context.Context, piID string) ([]mqtmodels.Reading, error)
+	GetLatestReadings(ctx context.Context, piID string) ([]hardware_models.Reading, error)
 	GetReadings(ctx context.Context, params ReadingQueryParams) (*ReadingQueryResult, error)
 	GetReadingsByDevice(ctx context.Context, piID string, deviceID int, params ReadingQueryParams) (*ReadingQueryResult, error)
 

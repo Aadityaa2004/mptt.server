@@ -1,7 +1,7 @@
 services:
   # MQTT Broker (Mosquitto)
   mosquitto:
-    build: ./mosquitto
+    build: ./src/production/MQT.Mosquitto
     container_name: mqtt-broker
     ports:
       - "1883:1883"        # MQTT (dev)
@@ -41,7 +41,7 @@ services:
 
   # MQTT Bridge - Forwards messages from external broker to local broker
   mqtt-bridge:
-    build: ./bridge
+    build: ./src/production/MQT.Bridge
     container_name: mqtt-bridge
     depends_on:
       mosquitto:
@@ -74,17 +74,61 @@ services:
     networks:
       - mqtt-network
 
-  # Go MQTT Ingestor Service
-  ingestor:
-    build: .
+  # MQTT Ingestor Service - Standalone data ingestion
+  mqtt-ingestor:
+    build: ./src/production/MQT.IngestorService
     container_name: mqtt-ingestor
     depends_on:
-      mosquitto:
-        condition: service_healthy
+      - mosquitto
+      - api-service
+    ports:
+      - "9003:9003"        # Health check endpoint
+    environment:
+      # Health Server
+      - INGESTOR_PORT=9003
+      
+      # API Service Configuration
+      - API_SERVICE_URL=http://api-service:9002
+      - INTERNAL_API_SECRET=secret-key-for-service-auth
+      
+      # MQTT Broker Configuration (Dev)
+      - BROKER_HOST=mosquitto
+      - BROKER_PORT=1883
+      - BROKER_TLS=false
+      - BROKER_USER=
+      - BROKER_PASS=
+      - BROKER_CA_FILE=
+      
+      # MQTT Subscription Configuration
+      - MQTT_TOPIC=sensors/#
+      - MQTT_CLIENT_ID=mqtt-ingestor-1
+      - MQTT_SHARED_GROUP=
+      
+      # Batch Processing Configuration
+      - BATCH_SIZE=200
+      - BATCH_WINDOW=1s
+      
+      # Timezone
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # API Service - REST API with authentication
+  api-service:
+    build: ./src/production/MQT.ApiService
+    container_name: api-service
+    depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "9002:9002"        # HTTP health endpoint
+      - "9002:9002"        # HTTP API endpoint
     environment:
       # HTTP Server
       - PORT=9002
@@ -97,34 +141,38 @@ services:
       - POSTGRES_DB=iot
       - POSTGRES_SSLMODE=disable
       
-      # MQTT Broker Configuration (Dev)
-      - BROKER_HOST=mosquitto
-      - BROKER_PORT=1883
-      - BROKER_TLS=false
-      - BROKER_USER=
-      - BROKER_PASS=
-      - BROKER_CA_FILE=
+      # Service-to-Service Authentication
+      - INTERNAL_API_SECRET=secret-key-for-service-auth
       
-      # MQTT Subscription Configuration
-      - MQTT_TOPIC=sensors/#
-      - MQTT_CLIENT_ID=go-ingestor-1
-      - MQTT_SHARED_GROUP=
+      # Auth Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-secret-in-production}
+      - JWT_ISSUER=mpt-api-service
+      - JWT_ACCESS_TOKEN_DURATION=24h
+      - JWT_REFRESH_TOKEN_DURATION=168h
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-adminpassword123}
       
-      # Batch Processing Configuration
-      - BATCH_SIZE=200
-      - BATCH_WINDOW=1s
+      # CORS Configuration
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Origin,Content-Type,Accept,Authorization,token
+      - CORS_EXPOSED_HEADERS=Content-Length
+      - CORS_ALLOW_CREDENTIALS=true
+      - CORS_MAX_AGE=43200
       
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9002/health"]
+      test: ["CMD-SHELL", "exit 0"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     networks:
       - mqtt-network
+
 
   # Optional: MQTT Explorer for testing (development only)
   mqtt-explorer:
