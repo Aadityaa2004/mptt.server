@@ -76,7 +76,9 @@ services:
 
   # MQTT Ingestor Service - Standalone data ingestion
   mqtt-ingestor:
-    build: ./src/production/MQT.IngestorService
+    build:
+      context: .
+      dockerfile: ./src/production/MQT.IngestorService/Dockerfile
     container_name: mqtt-ingestor
     depends_on:
       - mosquitto
@@ -122,7 +124,9 @@ services:
 
   # API Service - REST API with authentication
   api-service:
-    build: ./src/production/MQT.ApiService
+    build:
+      context: .
+      dockerfile: ./src/production/MQT.ApiService/Dockerfile
     container_name: api-service
     depends_on:
       postgres:
