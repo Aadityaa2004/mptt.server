@@ -653,42 +653,12 @@ To see the actual data:
 2. Navigate to your `readings` table (see Part 2, Step 6)
 3. You should see your test message data in the table!
 
----
 
-## 🔄 **System Changes - Simplified RBAC**
 
-### **What Changed**
 
-The system has been simplified from a complex permission-based authentication system to a simple role-based access control (RBAC) system:
 
-#### **Removed:**
-- ❌ Permission tokens
-- ❌ Complex permission arrays
-- ❌ Permission-based middleware
-- ❌ Permission management endpoints
-- ❌ JSONB permissions columns in database
 
-#### **Added:**
-- ✅ Simple two-role system (admin/user)
-- ✅ Role-based authorization middleware
-- ✅ Clean JWT token structure
-- ✅ Ownership-based resource access
-- ✅ Simplified database schema
-
-#### **Key Benefits:**
-- **Simpler**: Only 2 roles instead of complex permissions
-- **Faster**: No permission token validation needed
-- **Cleaner**: Easier to understand and maintain
-- **Scalable**: Easy to add new roles if needed
-- **Secure**: Clear separation between admin and user access
-
-### **Migration Notes:**
-- Existing tokens remain valid until natural expiration
-- Database automatically migrates on startup
-- Admin user is created automatically with default credentials
-- All permission-based logic has been replaced with role checks
-
----
+--- 
 
 ## 🔍 **Understanding Your Data Structure**
 
