@@ -3,7 +3,7 @@ package interfaces
 import (
 	"context"
 
-	mqtmodels "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models"
+	auth_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/auth"
 )
 
 // PaginationResult represents a paginated result
@@ -15,15 +15,20 @@ type PaginationResult struct {
 
 type UserRepository interface {
 	// Create user
-	CreateUser(ctx context.Context, user mqtmodels.User) error
+	Create(ctx context.Context, user *auth_models.User) (*auth_models.User, error)
 
 	// Read users
-	GetUser(ctx context.Context, userID string) (*mqtmodels.User, error)
-	ListUsers(ctx context.Context, page, pageSize int, role string) (*PaginationResult, error)
+	GetByID(ctx context.Context, userID string) (*auth_models.User, error)
+	FindByID(ctx context.Context, userID string) (*auth_models.User, error)
+	GetByUsername(ctx context.Context, username string) (*auth_models.User, error)
+	GetAll(ctx context.Context) ([]*auth_models.User, error)
+	List(ctx context.Context, page, pageSize int, role string) (*PaginationResult, error)
+	GetUser(ctx context.Context, userID string) (*auth_models.User, error)
+	GetByRole(ctx context.Context, role string) ([]*auth_models.User, error)
 
 	// Update user
-	UpdateUser(ctx context.Context, user mqtmodels.User) error
+	Update(ctx context.Context, user *auth_models.User) error
 
 	// Delete user
-	DeleteUser(ctx context.Context, userID string, hardDelete bool) error
+	Delete(ctx context.Context, userID string, hardDelete bool) error
 }
