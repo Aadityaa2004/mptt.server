@@ -23,8 +23,8 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-PI_ID = "pi_K001"
-DEVICE_ID = "10000"
+PI_ID = "pi_demo_001"
+DEVICE_ID = "1000"
 TOPIC = f"sensors/{PI_ID}/{DEVICE_ID}/reading"
 
 # Test data
