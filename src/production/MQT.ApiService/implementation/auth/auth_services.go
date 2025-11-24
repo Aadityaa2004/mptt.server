@@ -22,10 +22,12 @@ type AuthService struct {
 }
 
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
+	Username  string   `json:"username"`
+	Email     string   `json:"email"`
+	Password  string   `json:"password"`
+	Role      string   `json:"role"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
 }
 
 type LoginRequest struct {
@@ -84,7 +86,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*auth_
 	}
 
 	// Create user
-	user := auth_models.NewUser(req.Username, req.Email, string(hashedPassword), req.Role)
+	user := auth_models.NewUser(req.Username, req.Email, string(hashedPassword), req.Role, req.Latitude, req.Longitude)
 	return s.userRepo.Create(ctx, user)
 }
 

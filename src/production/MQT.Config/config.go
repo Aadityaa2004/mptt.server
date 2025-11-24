@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -29,6 +30,9 @@ type Config struct {
 
 	// CORS configuration
 	CORS CORSConfig `json:"cors"`
+
+	// OpenWeather API configuration
+	OpenWeatherAPIKey string `json:"open_weather_api_key"`
 }
 
 // ServerConfig holds server-related configuration
@@ -168,10 +172,28 @@ func LoadIngestorConfig() (*IngestorConfig, error) {
 
 // LoadApiConfig loads configuration for the API service
 func LoadApiConfig() (*Config, error) {
-	// Try to load .env file, but don't fail if it doesn't exist
-	if err := godotenv.Load(); err != nil {
+	// Try to load .env file from multiple locations
+	// First try the service-specific location, then the repo root
+	envPaths := []string{
+		"src/production/MQT.ApiService/.env",
+		".env",
+		filepath.Join("src", "production", "MQT.ApiService", ".env"),
+	}
+
+	envLoaded := false
+	for _, path := range envPaths {
+		if err := godotenv.Load(path); err == nil {
+			envLoaded = true
+			log.Printf("Loaded .env file from: %s", path)
+			break
+		}
+	}
+
+	// If no .env file was found, that's okay - use environment variables directly
+	if !envLoaded {
 		// Silently ignore .env file loading errors
 		// This allows the application to work with environment variables set directly
+		log.Println("No .env file found, using environment variables directly")
 	}
 
 	config := &Config{
@@ -232,6 +254,7 @@ func LoadApiConfig() (*Config, error) {
 			AllowCredentials: getBool("CORS_ALLOW_CREDENTIALS", true),
 			MaxAge:           getInt("CORS_MAX_AGE", 43200), // 12 hours
 		},
+		OpenWeatherAPIKey: getEnv("OPENWEATHER_API_KEY", ""),
 	}
 
 	// Validate configuration
