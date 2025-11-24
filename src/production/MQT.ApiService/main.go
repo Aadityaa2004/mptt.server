@@ -121,7 +121,7 @@ func main() {
 	router.Use(cors.New(corsConfig))
 
 	// Create controllers and register routes
-	authController := controllers.NewAuthController(authServiceInstance)
+	authController := controllers.NewAuthController(authServiceInstance, config.OpenWeatherAPIKey)
 	userController := controllers.NewUserController(userServiceInstance)
 	piController := controllers.NewPiController(piRepo, userRepo, logger, authMiddlewareInstance)
 	deviceController := controllers.NewDeviceController(deviceRepo, piRepo, logger, authMiddlewareInstance)

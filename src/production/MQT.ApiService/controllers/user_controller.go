@@ -105,9 +105,11 @@ func (h *UserController) UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
 
 	var req struct {
-		Username string `json:"username,omitempty"`
-		Email    string `json:"email,omitempty"`
-		Password string `json:"password,omitempty"`
+		Username  string   `json:"username,omitempty"`
+		Email     string   `json:"email,omitempty"`
+		Password  string   `json:"password,omitempty"`
+		Latitude  *float64 `json:"latitude,omitempty"`
+		Longitude *float64 `json:"longitude,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -142,6 +144,12 @@ func (h *UserController) UpdateUser(c *gin.Context) {
 			return
 		}
 		user.Password = hashedPassword
+	}
+	if req.Latitude != nil {
+		user.Latitude = req.Latitude
+	}
+	if req.Longitude != nil {
+		user.Longitude = req.Longitude
 	}
 
 	// Update user in database

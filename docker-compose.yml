@@ -165,6 +165,9 @@ services:
       - CORS_ALLOW_CREDENTIALS=true
       - CORS_MAX_AGE=43200
       
+      # OpenWeather API Configuration
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped

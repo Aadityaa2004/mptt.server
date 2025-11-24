@@ -126,6 +126,8 @@ func (s *RoleInitializerService) InitializeAdminUser(ctx context.Context) error 
 		s.adminConfig.Email,
 		string(hashedPassword),
 		"admin",
+		nil, // latitude
+		nil, // longitude
 	)
 
 	_, err = s.userRepo.Create(ctx, adminUser)
