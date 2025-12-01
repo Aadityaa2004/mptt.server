@@ -133,6 +133,8 @@ services:
         condition: service_healthy
     ports:
       - "9002:9002"        # HTTP API endpoint
+    env_file:
+      - .env
     environment:
       # HTTP Server
       - PORT=9002

@@ -124,6 +124,8 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 			password    TEXT NOT NULL,
 			role        TEXT NOT NULL,
 			active      BOOLEAN NOT NULL DEFAULT true,
+			latitude    DOUBLE PRECISION,
+			longitude   DOUBLE PRECISION,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 		);

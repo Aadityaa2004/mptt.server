@@ -86,10 +86,10 @@ type ValidateDeviceResponse struct {
 
 // CreateReadingRequest represents the request to create a reading
 type CreateReadingRequest struct {
-	PiID     string                 `json:"pi_id"`
-	DeviceID int                    `json:"device_id"`
-	Ts       time.Time              `json:"ts"`
-	Payload  map[string]interface{} `json:"payload"`
+	PiID     string                          `json:"pi_id"`
+	DeviceID int                             `json:"device_id"`
+	Ts       time.Time                       `json:"ts"`
+	Payload  hardware_models.ReadingPayload  `json:"payload"`
 }
 
 // CreateReadingResponse represents the response from reading creation

@@ -24,12 +24,14 @@ except ImportError:
 
 # Configuration
 PI_ID = "pi_demo_001"
-DEVICE_ID = "1000"
+DEVICE_ID = "1000"  # MAC_ADDR equivalent for testing
 TOPIC = f"sensors/{PI_ID}/{DEVICE_ID}/reading"
 
 # Test data
-BASE_TEMP = 22.0
-TEMP_VARIATION = 2.0
+BASE_TEMP_C = 22.0
+TEMP_VARIATION_C = 2.0
+LEVEL_BASE_CM = 3.0
+LEVEL_VARIATION_CM = 0.8
 
 class MqttPublisher:
     def __init__(self, host="localhost", port=1883):
@@ -108,31 +110,56 @@ class MqttPublisher:
             return False
 
     def publish_temperature(self):
-        """Generate and publish temperature reading"""
+        """Generate and publish temperature reading in mqtt_envelope format"""
         if not self.connected:
             print("⚠️  Not connected, skipping publish")
             return False
         
-        # Generate realistic temperature reading
-        temp = BASE_TEMP + random.uniform(-TEMP_VARIATION, TEMP_VARIATION)
-        
-        # Create payload
-        payload = {
-            "device_id": DEVICE_ID,
-            "pi_id": PI_ID,
-            "timestamp": datetime.now().isoformat(),
-            "temperature": round(temp, 2),
-            "unit": "celsius",
-            "humidity": round(random.uniform(40, 70), 1),  # Optional humidity
-            "battery": round(random.uniform(85, 100), 1)   # Optional battery l>
+        # Generate realistic sensor readings
+        temp_c = BASE_TEMP_C + random.uniform(-TEMP_VARIATION_C, TEMP_VARIATION_C)
+        temp_f = (temp_c * 9.0 / 5.0) + 32.0
+        level_cm = LEVEL_BASE_CM + random.uniform(-LEVEL_VARIATION_CM, LEVEL_VARIATION_CM)
+        battery_pct = round(random.uniform(85, 100), 1)
+
+        timestamp = datetime.now().isoformat()
+
+        # Create mqtt_envelope payload
+        envelope = {
+            "mqtt_envelope": {
+                "topic": TOPIC,
+                "payload": {
+                    "device_id": DEVICE_ID,
+                    "pi_id": PI_ID,
+                    "timestamp": timestamp,
+                    "sensors": {
+                        "temperature": {
+                            "value": round(temp_f, 2),
+                            "unit": "fahrenheit",
+                        },
+                        "level": {
+                            "value": round(level_cm, 2),
+                            "unit": "centimeter",
+                        },
+                    },
+                    "battery_percentage": battery_pct,
+                },
+                "qos": 1,
+                "retain": False,
+                # Note: message_id here is an application-level id, not the MQTT mid
+                "message_id": int(time.time() * 1000),
+                "duplicate": False,
+            }
         }
         
         try:
             # Publish with QoS 1 for reliability
-            result = self.client.publish(TOPIC, json.dumps(payload), qos=1)
+            result = self.client.publish(TOPIC, json.dumps(envelope), qos=1)
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] Publish: {temp:.2f}°C")
+                print(
+                    f"[{datetime.now().strftime('%H:%M:%S')}] "
+                    f"Publish: {temp_f:.2f}°F, level={level_cm:.2f}cm, battery={battery_pct:.1f}%"
+                )
                 return True
             else:
                 print(f"❌ Publish failed: {result.rc}")

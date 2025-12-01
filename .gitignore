@@ -3,6 +3,7 @@
 .env.local
 .env.production
 .env.staging
+.cus
 
 # Go specific
 *.exe

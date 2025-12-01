@@ -52,10 +52,10 @@ type ValidateDeviceResponse struct {
 
 // CreateReadingRequest represents the request to create a reading
 type CreateReadingRequest struct {
-	PiID     string                 `json:"pi_id" binding:"required"`
-	DeviceID int                    `json:"device_id" binding:"required"`
-	Ts       string                 `json:"ts" binding:"required"`
-	Payload  map[string]interface{} `json:"payload" binding:"required"`
+	PiID     string                      `json:"pi_id" binding:"required"`
+	DeviceID int                         `json:"device_id" binding:"required"`
+	Ts       string                      `json:"ts" binding:"required"`
+	Payload  hardware_models.ReadingPayload `json:"payload" binding:"required"`
 }
 
 // CreateReadingResponse represents the response from reading creation
@@ -179,7 +179,12 @@ func (c *InternalController) RegisterRoutes(router *gin.Engine) {
 
 // parseTimeString parses a time string in RFC3339 format
 func parseTimeString(timeStr string) (time.Time, error) {
-	// Try RFC3339 format first
+	// Try RFC3339 with nanoseconds first (covers microsecond precision timestamps)
+	if t, err := time.Parse(time.RFC3339Nano, timeStr); err == nil {
+		return t, nil
+	}
+
+	// Then try standard RFC3339
 	if t, err := time.Parse(time.RFC3339, timeStr); err == nil {
 		return t, nil
 	}
