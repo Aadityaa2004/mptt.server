@@ -11,12 +11,12 @@ type DeviceRepository interface {
 	CreateOrUpdateDevice(ctx context.Context, device hardware_models.Device) error
 
 	// Read devices
-	GetDevice(ctx context.Context, piID string, deviceID int) (*hardware_models.Device, error)
+	GetDevice(ctx context.Context, piID string, deviceID string) (*hardware_models.Device, error)
 	ListDevicesByPi(ctx context.Context, piID string, page, pageSize int) (*PaginationResult, error)
 
 	// Update device
 	UpdateDevice(ctx context.Context, device hardware_models.Device) error
 
 	// Delete device
-	DeleteDevice(ctx context.Context, piID string, deviceID int, cascade bool) error
+	DeleteDevice(ctx context.Context, piID string, deviceID string, cascade bool) error
 }

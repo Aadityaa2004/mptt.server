@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 )
 
 // ReadingController handles Reading management requests
@@ -129,12 +129,7 @@ func (c *ReadingController) GetReadings(ctx *gin.Context) {
 
 func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	// Check if user has access to this PI
 	userRole, _ := middleware.GetRoleFromGinContext(ctx)
@@ -158,7 +153,7 @@ func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 
 	params := interfaces.ReadingQueryParams{
 		PiID:     piID,
-		DeviceID: deviceIDStr,
+		DeviceID: deviceID,
 		Limit:    limit,
 		Page:     page,
 	}

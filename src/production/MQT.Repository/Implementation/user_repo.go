@@ -3,6 +3,7 @@ package implementation
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,16 +29,21 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *auth_models.U
 	user.UpdatedAt = time.Now()
 
 	query := `
-		INSERT INTO users (user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO users (user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (user_id) 
 		DO UPDATE SET username = EXCLUDED.username, email = EXCLUDED.email, password = EXCLUDED.password, 
 		              role = EXCLUDED.role, active = EXCLUDED.active, latitude = EXCLUDED.latitude, 
-		              longitude = EXCLUDED.longitude, updated_at = EXCLUDED.updated_at
+		              longitude = EXCLUDED.longitude, locations = EXCLUDED.locations, updated_at = EXCLUDED.updated_at
 	`
 
-	_, err := r.db.ExecContext(ctx, query, user.UserID, user.Username, user.Email,
-		user.Password, user.Role, user.Active, user.Latitude, user.Longitude, user.CreatedAt, user.UpdatedAt)
+	locationsJSON, err := json.Marshal(user.Locations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal locations: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx, query, user.UserID, user.Username, user.Email,
+		user.Password, user.Role, user.Active, user.Latitude, user.Longitude, locationsJSON, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +53,25 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *auth_models.U
 
 // Read users
 func (r *PostgresUserRepository) GetByID(ctx context.Context, userID string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users WHERE user_id = $1`
+	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users WHERE user_id = $1`
 
 	var user auth_models.User
+	var locationsJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	// Parse locations JSON
+	if len(locationsJSON) > 0 {
+		if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+		}
 	}
 
 	return &user, nil
@@ -74,12 +88,13 @@ func (r *PostgresUserRepository) GetUser(ctx context.Context, userID string) (*a
 }
 
 func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users WHERE username = $1`
+	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users WHERE username = $1`
 
 	var user auth_models.User
+	var locationsJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, username).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -87,11 +102,18 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 		return nil, err
 	}
 
+	// Parse locations JSON
+	if len(locationsJSON) > 0 {
+		if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+		}
+	}
+
 	return &user, nil
 }
 
 func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users ORDER BY created_at DESC`
+	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users ORDER BY created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -102,10 +124,18 @@ func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.Use
 	var users []*auth_models.User
 	for rows.Next() {
 		var user auth_models.User
+		var locationsJSON []byte
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
-			&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
+		}
+
+		// Parse locations JSON
+		if len(locationsJSON) > 0 {
+			if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+			}
 		}
 
 		users = append(users, &user)
@@ -124,10 +154,10 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 	var args []interface{}
 
 	if role != "" {
-		query = `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		query = `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 		args = []interface{}{role, pageSize, offset}
 	} else {
-		query = `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		query = `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 		args = []interface{}{pageSize, offset}
 	}
 
@@ -140,10 +170,18 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 	var users []auth_models.User
 	for rows.Next() {
 		var user auth_models.User
+		var locationsJSON []byte
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password,
-			&user.Role, &user.Active, &user.Latitude, &user.Longitude, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			&user.Role, &user.Active, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
+		}
+
+		// Parse locations JSON
+		if len(locationsJSON) > 0 {
+			if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+			}
 		}
 
 		users = append(users, user)
@@ -170,14 +208,19 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 func (r *PostgresUserRepository) Update(ctx context.Context, user *auth_models.User) error {
 	user.UpdatedAt = time.Now()
 
+	locationsJSON, err := json.Marshal(user.Locations)
+	if err != nil {
+		return fmt.Errorf("failed to marshal locations: %w", err)
+	}
+
 	query := `
 		UPDATE users 
-		SET username = $1, email = $2, password = $3, role = $4, active = $5, latitude = $6, longitude = $7, updated_at = $8 
-		WHERE user_id = $9
+		SET username = $1, email = $2, password = $3, role = $4, active = $5, latitude = $6, longitude = $7, locations = $8, updated_at = $9 
+		WHERE user_id = $10
 	`
 
 	result, err := r.db.ExecContext(ctx, query, user.Username, user.Email, user.Password,
-		user.Role, user.Active, user.Latitude, user.Longitude, user.UpdatedAt, user.UserID)
+		user.Role, user.Active, user.Latitude, user.Longitude, locationsJSON, user.UpdatedAt, user.UserID)
 	if err != nil {
 		return err
 	}
@@ -196,7 +239,7 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *auth_models.U
 
 // GetByRole retrieves users by role
 func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC`
+	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, role)
 	if err != nil {
@@ -207,11 +250,19 @@ func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]
 	var users []*auth_models.User
 	for rows.Next() {
 		var user auth_models.User
+		var locationsJSON []byte
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
 			&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude,
-			&user.CreatedAt, &user.UpdatedAt); err != nil {
+			&locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
+		}
+
+		// Parse locations JSON
+		if len(locationsJSON) > 0 {
+			if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+			}
 		}
 
 		users = append(users, &user)

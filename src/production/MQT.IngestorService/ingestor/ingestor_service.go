@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -180,13 +179,6 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 
 		// Process each reading in the batch
 		for _, readingWithTopic := range batch {
-			// Convert deviceID string to int
-			deviceIDInt, err := strconv.Atoi(readingWithTopic.DeviceID)
-			if err != nil {
-				i.logger.Logger.Error().Err(err).Str("device_id", readingWithTopic.DeviceID).Msg("Error converting device_id to int")
-				continue
-			}
-
 			// Validate Pi exists via API
 			piExists, err := i.apiClient.ValidatePi(ctx, readingWithTopic.PiID)
 			if err != nil {
@@ -201,15 +193,15 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			}
 
 			// Validate device exists via API
-			deviceExists, err := i.apiClient.ValidateDevice(ctx, readingWithTopic.PiID, deviceIDInt)
+			deviceExists, err := i.apiClient.ValidateDevice(ctx, readingWithTopic.PiID, readingWithTopic.DeviceID)
 			if err != nil {
-				i.logger.Logger.Error().Err(err).Str("pi_id", readingWithTopic.PiID).Int("device_id", deviceIDInt).Msg("Failed to validate Device via API")
-				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_validation_error", fmt.Sprintf("Failed to validate Device %d: %v", deviceIDInt, err))
+				i.logger.Logger.Error().Err(err).Str("pi_id", readingWithTopic.PiID).Str("device_id", readingWithTopic.DeviceID).Msg("Failed to validate Device via API")
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_validation_error", fmt.Sprintf("Failed to validate Device %s: %v", readingWithTopic.DeviceID, err))
 				continue
 			}
 			if !deviceExists {
-				i.logger.Logger.Warn().Str("pi_id", readingWithTopic.PiID).Int("device_id", deviceIDInt).Msg("Skipping reading: device not found")
-				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_not_found", fmt.Sprintf("Device %d does not exist for Pi %s", deviceIDInt, readingWithTopic.PiID))
+				i.logger.Logger.Warn().Str("pi_id", readingWithTopic.PiID).Str("device_id", readingWithTopic.DeviceID).Msg("Skipping reading: device not found")
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_not_found", fmt.Sprintf("Device %s does not exist for Pi %s", readingWithTopic.DeviceID, readingWithTopic.PiID))
 				continue
 			}
 
@@ -231,7 +223,7 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			// Create reading via API
 			reading := hardware_models.Reading{
 				PiID:     readingWithTopic.PiID,
-				DeviceID: deviceIDInt,
+				DeviceID: readingWithTopic.DeviceID,
 				Ts:       ts,
 				Payload:  readingWithTopic.Payload,
 			}

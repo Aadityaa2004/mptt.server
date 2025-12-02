@@ -123,6 +123,7 @@ func main() {
 	// Create controllers and register routes
 	authController := controllers.NewAuthController(authServiceInstance, config.OpenWeatherAPIKey)
 	userController := controllers.NewUserController(userServiceInstance)
+	locationController := controllers.NewLocationController(authServiceInstance)
 	piController := controllers.NewPiController(piRepo, userRepo, logger, authMiddlewareInstance)
 	deviceController := controllers.NewDeviceController(deviceRepo, piRepo, logger, authMiddlewareInstance)
 	readingController := controllers.NewReadingController(readingRepo, piRepo, logger, authMiddlewareInstance)
@@ -132,6 +133,7 @@ func main() {
 	// Register all routes
 	authController.RegisterRoutes(router, authMiddlewareInstance)
 	userController.RegisterRoutes(router, authMiddlewareInstance)
+	locationController.RegisterRoutes(router, authMiddlewareInstance)
 	piController.RegisterRoutes(router)
 	deviceController.RegisterRoutes(router)
 	readingController.RegisterRoutes(router)

@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 )
 
 // DeviceController handles Device management requests
@@ -47,8 +46,7 @@ func (c *DeviceController) RegisterRoutes(router *gin.Engine) {
 }
 
 type CreateDeviceRequest struct {
-	DeviceID   int    `json:"device_id" binding:"required"`
-	DeviceType string `json:"device_type" binding:"required"`
+	DeviceID string `json:"device_id" binding:"required"`
 }
 
 func (c *DeviceController) CreateDevice(ctx *gin.Context) {
@@ -61,10 +59,8 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 	}
 
 	device := hardware_models.Device{
-		PiID:       piID,
-		DeviceID:   req.DeviceID,
-		DeviceType: req.DeviceType,
-		CreatedAt:  time.Now(),
+		PiID:     piID,
+		DeviceID: req.DeviceID,
 	}
 
 	if err := c.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
@@ -106,12 +102,7 @@ func (c *DeviceController) ListDevices(ctx *gin.Context) {
 
 func (c *DeviceController) GetDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	device, err := c.deviceRepo.GetDevice(ctx, piID, deviceID)
 	if err != nil {
@@ -142,17 +133,12 @@ func (c *DeviceController) GetDevice(ctx *gin.Context) {
 }
 
 type UpdateDeviceRequest struct {
-	DeviceType *string `json:"device_type,omitempty"`
+	// No updatable fields on Device schema; request body is intentionally empty.
 }
 
 func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	// Get existing device
 	existingDevice, err := c.deviceRepo.GetDevice(ctx, piID, deviceID)
@@ -165,17 +151,6 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 		return
 	}
 
-	var req UpdateDeviceRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Update device_type if provided
-	if req.DeviceType != nil {
-		existingDevice.DeviceType = *req.DeviceType
-	}
-
 	if err := c.deviceRepo.UpdateDevice(ctx, *existingDevice); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -186,12 +161,7 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 
 func (c *DeviceController) DeleteDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	cascade := ctx.DefaultQuery("cascade", "false") == "true"
 

@@ -21,22 +21,22 @@ func NewPostgresPiRepository(db *sql.DB) *PostgresPiRepository {
 func (r *PostgresPiRepository) CreateOrUpdatePi(ctx context.Context, pi hardware_models.Pi) error {
 	query := `
 		INSERT INTO pis (pi_id, user_id, created_at) 
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, NOW())
 		ON CONFLICT (pi_id) 
 		DO UPDATE SET user_id = EXCLUDED.user_id
 	`
 
-	_, err := r.db.ExecContext(ctx, query, pi.PiID, pi.UserID, pi.CreatedAt)
+	_, err := r.db.ExecContext(ctx, query, pi.PiID, pi.UserID)
 	return err
 }
 
 // Read pis
 func (r *PostgresPiRepository) GetPi(ctx context.Context, piID string) (*hardware_models.Pi, error) {
-	query := `SELECT pi_id, user_id, created_at FROM pis WHERE pi_id = $1`
+	query := `SELECT pi_id, user_id FROM pis WHERE pi_id = $1`
 
 	var pi hardware_models.Pi
 
-	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.UserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -53,10 +53,10 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 	var args []interface{}
 
 	if userID != "" {
-		query = `SELECT pi_id, user_id, created_at FROM pis WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		query = `SELECT pi_id, user_id FROM pis WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 		args = []interface{}{userID, pageSize, offset}
 	} else {
-		query = `SELECT pi_id, user_id, created_at FROM pis ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		query = `SELECT pi_id, user_id FROM pis ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 		args = []interface{}{pageSize, offset}
 	}
 
@@ -70,7 +70,7 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 	for rows.Next() {
 		var pi hardware_models.Pi
 
-		if err := rows.Scan(&pi.PiID, &pi.UserID, &pi.CreatedAt); err != nil {
+		if err := rows.Scan(&pi.PiID, &pi.UserID); err != nil {
 			return nil, err
 		}
 

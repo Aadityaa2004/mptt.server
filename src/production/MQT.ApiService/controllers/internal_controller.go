@@ -41,7 +41,7 @@ type ValidatePiResponse struct {
 // ValidateDeviceRequest represents the request to validate a Device
 type ValidateDeviceRequest struct {
 	PiID     string `json:"pi_id" binding:"required"`
-	DeviceID int    `json:"device_id" binding:"required"`
+	DeviceID string `json:"device_id" binding:"required"`
 }
 
 // ValidateDeviceResponse represents the response from Device validation
@@ -52,9 +52,9 @@ type ValidateDeviceResponse struct {
 
 // CreateReadingRequest represents the request to create a reading
 type CreateReadingRequest struct {
-	PiID     string                      `json:"pi_id" binding:"required"`
-	DeviceID int                         `json:"device_id" binding:"required"`
-	Ts       string                      `json:"ts" binding:"required"`
+	PiID     string                         `json:"pi_id" binding:"required"`
+	DeviceID string                         `json:"device_id" binding:"required"`
+	Ts       string                         `json:"ts" binding:"required"`
 	Payload  hardware_models.ReadingPayload `json:"payload" binding:"required"`
 }
 

@@ -1,10 +1,8 @@
 package hardware_models
 
-import "time"
-
 // Pi represents a Raspberry Pi gateway
+// Note: metadata fields like created_at are intentionally omitted from the schema.
 type Pi struct {
-	PiID      string    `json:"pi_id" db:"pi_id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	PiID   string `json:"pi_id" db:"pi_id"`
+	UserID string `json:"user_id" db:"user_id"`
 }

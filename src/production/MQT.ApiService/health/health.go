@@ -126,6 +126,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 			active      BOOLEAN NOT NULL DEFAULT true,
 			latitude    DOUBLE PRECISION,
 			longitude   DOUBLE PRECISION,
+			locations   JSONB DEFAULT '[]'::jsonb,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
@@ -145,8 +146,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 	createDevicesTable := `
 		CREATE TABLE IF NOT EXISTS devices (
 			pi_id       TEXT NOT NULL,
-			device_id   INTEGER NOT NULL,
-			device_type TEXT,
+			device_id   TEXT NOT NULL,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			PRIMARY KEY (pi_id, device_id),
 			FOREIGN KEY (pi_id) REFERENCES pis(pi_id) ON DELETE CASCADE
@@ -157,7 +157,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 	createReadingsTable := `
 		CREATE TABLE IF NOT EXISTS readings (
 			pi_id       TEXT NOT NULL,
-			device_id   INTEGER NOT NULL,
+			device_id   TEXT NOT NULL,
 			ts          TIMESTAMPTZ NOT NULL,
 			payload     JSONB NOT NULL,
 			PRIMARY KEY (pi_id, device_id, ts),
