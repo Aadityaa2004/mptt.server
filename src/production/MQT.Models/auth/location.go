@@ -6,4 +6,5 @@ type DeviceLocation struct {
 	PiID      string  `json:"pi_id" binding:"required"`     // Pi ID
 	Latitude  float64 `json:"latitude" binding:"required"`  // Latitude coordinate
 	Longitude float64 `json:"longitude" binding:"required"` // Longitude coordinate
+	Color     string  `json:"color,omitempty"`              // Marker color (e.g., hex code, color name)
 }
