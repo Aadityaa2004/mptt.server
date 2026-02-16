@@ -180,6 +180,24 @@ services:
     networks:
       - mqtt-network
 
+  # MQT Frontend - Next.js web application
+  mqt-frontend:
+    build:
+      context: ./src/production/mqt.frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:9002}
+        - NEXT_PUBLIC_READINGS_API_BASE_URL=${NEXT_PUBLIC_READINGS_API_BASE_URL:-http://localhost:9002}
+    container_name: mqt-frontend
+    depends_on:
+      - api-service
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    networks:
+      - mqtt-network
 
   # Optional: MQTT Explorer for testing (development only)
   mqtt-explorer:
