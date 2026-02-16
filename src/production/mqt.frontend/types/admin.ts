@@ -20,6 +20,9 @@ export interface Pi {
 export interface Device {
   device_id: number | string; // Can be numeric ID or MAC address string (e.g., "AA:BB:CC:DD:EE:FF")
   pi_id: string;
+  height?: number;
+  top_diameter?: number;
+  bottom_diameter?: number;
   created_at: string;
   updated_at?: string;
 }
@@ -45,6 +48,7 @@ export interface Reading {
     sensors: SensorData;
     battery_percentage: number;
   };
+  fill_percentage?: number;
 }
 
 export interface SummaryStatistics {
@@ -74,10 +78,15 @@ export interface UpdatePiRequest {
 
 export interface CreateDeviceRequest {
   device_id: string | number; // Accepts MAC address as string (e.g., "AA:BB:CC:DD:EE:FF") or numeric ID
+  height?: number;
+  top_diameter?: number;
+  bottom_diameter?: number;
 }
 
 export interface UpdateDeviceRequest {
-  // No fields - device updates not currently supported
+  height?: number;
+  top_diameter?: number;
+  bottom_diameter?: number;
 }
 
 export interface UpdateUserRequest {

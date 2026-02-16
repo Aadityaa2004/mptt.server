@@ -33,6 +33,9 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
     pi_id: "",
     latitude: "",
     longitude: "",
+    height: "",
+    top_diameter: "",
+    bottom_diameter: "",
   });
   
   // Filter devices based on selected PI
@@ -213,6 +216,16 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       return;
     }
 
+    // Validate required bucket dimensions
+    const height = parseFloat(newDevice.height);
+    const topDiameter = parseFloat(newDevice.top_diameter);
+    const bottomDiameter = parseFloat(newDevice.bottom_diameter);
+
+    if (isNaN(height) || height <= 0 || isNaN(topDiameter) || topDiameter <= 0 || isNaN(bottomDiameter) || bottomDiameter <= 0) {
+      setFormError("Bucket dimensions (height, top diameter, bottom diameter) are required and must be positive numbers.");
+      return;
+    }
+
     // Check if device already exists on the map
     const deviceExists = devices.some(
       (device) => device.device_id === newDevice.device_id && device.pi_id === newDevice.pi_id
@@ -231,6 +244,9 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       pi_id: newDevice.pi_id,
       latitude: parseFloat(newDevice.latitude),
       longitude: parseFloat(newDevice.longitude),
+      height,
+      top_diameter: topDiameter,
+      bottom_diameter: bottomDiameter,
     });
 
     // Reset form
@@ -239,6 +255,9 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       pi_id: "",
       latitude: "",
       longitude: "",
+      height: "",
+      top_diameter: "",
+      bottom_diameter: "",
     });
     setShowAddForm(false);
     setIsAddingDevice(false);
@@ -258,6 +277,9 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       pi_id: "",
       latitude: "",
       longitude: "",
+      height: "",
+      top_diameter: "",
+      bottom_diameter: "",
     });
   };
 
@@ -569,11 +591,49 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
                 />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-white/60 font-light mb-1 block">Bucket Dimensions (required, in cm)</label>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newDevice.height}
+                    onChange={(e) => setNewDevice({ ...newDevice, height: e.target.value })}
+                    placeholder="Height"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newDevice.top_diameter}
+                    onChange={(e) => setNewDevice({ ...newDevice, top_diameter: e.target.value })}
+                    placeholder="Top Diameter"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newDevice.bottom_diameter}
+                    onChange={(e) => setNewDevice({ ...newDevice, bottom_diameter: e.target.value })}
+                    placeholder="Bottom Diameter"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+              </div>
+            </div>
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleAddDevice}
                 className="flex-1 bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!newDevice.device_id || !newDevice.pi_id || !newDevice.latitude || !newDevice.longitude}
+                disabled={!newDevice.device_id || !newDevice.pi_id || !newDevice.latitude || !newDevice.longitude || !newDevice.height || !newDevice.top_diameter || !newDevice.bottom_diameter}
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Add Device

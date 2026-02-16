@@ -11,6 +11,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// EmailConfig holds SMTP email configuration
+type EmailConfig struct {
+	SMTPHost       string `json:"smtp_host"`
+	SMTPPort       int    `json:"smtp_port"`
+	SMTPEncryption string `json:"smtp_encryption"`
+	SMTPUsername   string `json:"smtp_username"`
+	SMTPPassword   string `json:"smtp_password"`
+	FromName       string `json:"from_name"`
+	FromAddress    string `json:"from_address"`
+}
+
+// AlertConfig holds alert behavior configuration
+type AlertConfig struct {
+	BucketThreshold int    `json:"bucket_threshold"`
+	ResetThreshold  int    `json:"reset_threshold"`
+	CooldownMinutes int    `json:"cooldown_minutes"`
+	EmailServiceURL string `json:"email_service_url"`
+}
+
 // Config holds all application configuration
 type Config struct {
 	// Server configuration
@@ -33,6 +52,12 @@ type Config struct {
 
 	// OpenWeather API configuration
 	OpenWeatherAPIKey string `json:"open_weather_api_key"`
+
+	// Email configuration
+	Email EmailConfig `json:"email"`
+
+	// Alert configuration
+	Alert AlertConfig `json:"alert"`
 }
 
 // ServerConfig holds server-related configuration
@@ -255,6 +280,21 @@ func LoadApiConfig() (*Config, error) {
 			MaxAge:           getInt("CORS_MAX_AGE", 43200), // 12 hours
 		},
 		OpenWeatherAPIKey: getEnv("OPENWEATHER_API_KEY", ""),
+		Email: EmailConfig{
+			SMTPHost:       getEnv("SMTP_HOST", "smtp-relay.brevo.com"),
+			SMTPPort:       getInt("SMTP_PORT", 587),
+			SMTPEncryption: getEnv("SMTP_ENCRYPTION", "starttls"),
+			SMTPUsername:   getEnv("SMTP_USERNAME", ""),
+			SMTPPassword:   getEnv("SMTP_PASSWORD", ""),
+			FromName:       getEnv("EMAIL_FROM_NAME", "MapleSense Alerts"),
+			FromAddress:    getEnv("EMAIL_FROM_ADDRESS", ""),
+		},
+		Alert: AlertConfig{
+			BucketThreshold: getInt("ALERT_BUCKET_THRESHOLD", 75),
+			ResetThreshold:  getInt("ALERT_RESET_THRESHOLD", 70),
+			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
+			EmailServiceURL: getEnv("EMAIL_SERVICE_URL", "http://mqt-email:9004"),
+		},
 	}
 
 	// Validate configuration

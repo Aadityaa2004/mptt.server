@@ -33,6 +33,9 @@ export interface Device {
   latitude: number;
   longitude: number;
   color?: string; // Hex color code from backend
+  height?: number; // Bucket height in cm
+  top_diameter?: number; // Bucket top diameter in cm
+  bottom_diameter?: number; // Bucket bottom diameter in cm
   lastReading?: MQTTPayload;
   createdAt: string;
   updatedAt: string;
@@ -43,5 +46,8 @@ export interface CreateDeviceRequest {
   pi_id: string;
   latitude: number;
   longitude: number;
+  height?: number;
+  top_diameter?: number;
+  bottom_diameter?: number;
 }
 

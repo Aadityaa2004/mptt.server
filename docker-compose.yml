@@ -48,7 +48,7 @@ services:
         condition: service_healthy
     environment:
       # External Broker Configuration (where your RPi sensors connect)
-      - EXTERNAL_BROKER_HOST=172.24.131.97
+      - EXTERNAL_BROKER_HOST=172.24.130.199
       - EXTERNAL_BROKER_PORT=1883
       - EXTERNAL_BROKER_USER=${EXTERNAL_BROKER_USER:-}
       - EXTERNAL_BROKER_PASS=${EXTERNAL_BROKER_PASS:-}
@@ -132,11 +132,11 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "9002:9002"        # HTTP API endpoint
+      - "9002:9002"
     environment:
       # HTTP Server
       - PORT=9002
-      
+
       # PostgreSQL Configuration
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -144,10 +144,10 @@ services:
       - POSTGRES_PASSWORD=iot_password
       - POSTGRES_DB=iot
       - POSTGRES_SSLMODE=disable
-      
+
       # Service-to-Service Authentication
       - INTERNAL_API_SECRET=secret-key-for-service-auth
-      
+
       # Auth Configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-secret-in-production}
       - JWT_ISSUER=mpt-api-service
@@ -156,7 +156,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-adminpassword123}
-      
+
       # CORS Configuration
       - CORS_ALLOWED_ORIGINS=http://localhost:3000
       - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
@@ -164,10 +164,28 @@ services:
       - CORS_EXPOSED_HEADERS=Content-Length
       - CORS_ALLOW_CREDENTIALS=true
       - CORS_MAX_AGE=43200
-      
+
       # OpenWeather API Configuration
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
-      
+
+      # ========= Email (Brevo SMTP) =========
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-brevo}
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_ENCRYPTION=${SMTP_ENCRYPTION:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-MapleSense Alerts}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
+
+      # ========= Alert behavior =========
+      - ALERT_BUCKET_THRESHOLD=${ALERT_BUCKET_THRESHOLD:-75}
+      - ALERT_RESET_THRESHOLD=${ALERT_RESET_THRESHOLD:-70}
+      - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
+
+      # Email Service URL
+      - EMAIL_SERVICE_URL=http://mqt-email:9004
+
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped
@@ -180,6 +198,48 @@ services:
     networks:
       - mqtt-network
 
+  # MQT Email Alert Service
+  mqt-email:
+    build:
+      context: .
+      dockerfile: ./src/production/MQT.Email/Dockerfile
+    container_name: mqt-email
+    ports:
+      - "9004:9004"
+    environment:
+      - PORT=9004
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_ENCRYPTION=${SMTP_ENCRYPTION:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-MapleSense Alerts}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
+      - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
+      - ALERT_RESET_THRESHOLD=${ALERT_RESET_THRESHOLD:-70}
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    networks:
+      - mqtt-network
+
+  # MQT Frontend - Next.js web application
+  mqt-frontend:
+    build:
+      context: ./src/production/mqt.frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:9002}
+        - NEXT_PUBLIC_READINGS_API_BASE_URL=${NEXT_PUBLIC_READINGS_API_BASE_URL:-http://localhost:9002}
+    container_name: mqt-frontend
+    depends_on:
+      - api-service
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    networks:
+      - mqtt-network
 
   # Optional: MQTT Explorer for testing (development only)
   mqtt-explorer:

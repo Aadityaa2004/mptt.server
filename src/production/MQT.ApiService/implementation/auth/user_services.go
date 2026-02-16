@@ -62,6 +62,11 @@ func (s *UserService) DeleteUser(ctx context.Context, userID string) error {
 	return s.userRepo.Delete(ctx, userID, true) // hard delete
 }
 
+// GetUserByDeviceID finds the user associated with a device
+func (s *UserService) GetUserByDeviceID(ctx context.Context, deviceID string) (*auth_models.User, error) {
+	return s.userRepo.GetUserByDeviceID(ctx, deviceID)
+}
+
 // HashPassword hashes a password using bcrypt
 func (s *UserService) HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

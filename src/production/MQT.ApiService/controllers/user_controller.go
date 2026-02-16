@@ -49,6 +49,10 @@ func (h *UserController) RegisterRoutes(router *gin.Engine, authMiddleware *midd
 		users.PUT("/:id/role",
 			authMiddleware.RequireAdmin(),
 			h.UpdateUserRole)
+
+		// Get user by device ID
+		users.GET("/by-device/:device_id",
+			h.GetUserByDeviceID)
 	}
 }
 
@@ -186,6 +190,24 @@ func (h *UserController) DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}
+
+// GetUserByDeviceID retrieves the user associated with a device
+func (h *UserController) GetUserByDeviceID(c *gin.Context) {
+	deviceID := c.Param("device_id")
+
+	user, err := h.userService.GetUserByDeviceID(c.Request.Context(), deviceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no user found for device"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 // UpdateUserRole updates a user's role

@@ -160,7 +160,10 @@ export const adminService = {
     const requestBody: Record<string, unknown> = {
       device_id: deviceIdString,
     };
-    
+    if (deviceData.height) requestBody.height = deviceData.height;
+    if (deviceData.top_diameter) requestBody.top_diameter = deviceData.top_diameter;
+    if (deviceData.bottom_diameter) requestBody.bottom_diameter = deviceData.bottom_diameter;
+
     const response = await apiFetch(`/pis/${piId}/devices`, {
       method: "POST",
       body: JSON.stringify(requestBody),
@@ -201,8 +204,10 @@ export const adminService = {
     deviceId: number | string,
     updates: UpdateDeviceRequest
   ): Promise<Device> {
-    // Device updates not currently supported by backend
     const requestBody: Record<string, unknown> = {};
+    if (updates.height !== undefined) requestBody.height = updates.height;
+    if (updates.top_diameter !== undefined) requestBody.top_diameter = updates.top_diameter;
+    if (updates.bottom_diameter !== undefined) requestBody.bottom_diameter = updates.bottom_diameter;
     // URL encode deviceId to handle MAC addresses with colons
     const encodedDeviceId = encodeURIComponent(String(deviceId));
     const response = await apiFetch(`/pis/${piId}/devices/${encodedDeviceId}`, {

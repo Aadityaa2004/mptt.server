@@ -260,6 +260,9 @@ export default function UserDashboardPage() {
         latitude: deviceData.latitude,
         longitude: deviceData.longitude,
         color: hexColor,
+        ...(deviceData.height !== undefined && { height: deviceData.height }),
+        ...(deviceData.top_diameter !== undefined && { top_diameter: deviceData.top_diameter }),
+        ...(deviceData.bottom_diameter !== undefined && { bottom_diameter: deviceData.bottom_diameter }),
       });
       // Reload all devices to ensure consistency
       await loadDevices();
