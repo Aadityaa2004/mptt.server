@@ -184,7 +184,7 @@ services:
       - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
 
       # Email Service URL
-      - EMAIL_SERVICE_URL=http://mqt-email:9004
+      - EMAIL_SERVICE_URL=http://mqt-email-service:9004
 
       # Timezone
       - TZ=Etc/UTC
@@ -199,11 +199,11 @@ services:
       - mqtt-network
 
   # MQT Email Alert Service
-  mqt-email:
+  mqt-email-service:
     build:
       context: .
-      dockerfile: ./src/production/MQT.Email/Dockerfile
-    container_name: mqt-email
+      dockerfile: ./src/production/MQT.EmailService/Dockerfile
+    container_name: mqt-email-service
     ports:
       - "9004:9004"
     environment:

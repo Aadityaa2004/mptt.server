@@ -14,6 +14,17 @@ This is your **step-by-step checklist** for deploying on a Raspberry Pi using Cl
 
 ---
 
+## Testing the RPi stack locally (optional)
+
+To run the same stack on your **dev machine** with **localhost** (same nginx routing, no orpheus-networks.com):
+
+1. `cp docker-compose.rpi.override.example.yml docker-compose.rpi.override.yml`
+2. `cp env.rpi.local.example .env.rpi.local` and edit (or keep using `.env.production`; override will still set CORS and build frontend with localhost)
+3. `docker compose -f docker-compose.rpi.yml -f docker-compose.rpi.override.yml --env-file .env.rpi.local up --build`
+4. Open **http://localhost** (nginx). See [README.md](README.md) → "Testing the RPi stack locally" for details.
+
+---
+
 ## Step 1: Install Docker & Docker Compose on Pi
 
 ```bash
@@ -106,6 +117,12 @@ MQTT_CLIENT_ID=mqtt-ingestor-prod
 
 # OpenWeather API Key
 OPENWEATHER_API_KEY=14ef204fbb7a18e0dda966c94fe7533b
+
+# Email (Brevo SMTP) - for MQT EmailService alerts
+SMTP_USERNAME=<brevo-smtp-login>
+SMTP_PASSWORD=<brevo-smtp-key>
+EMAIL_FROM_ADDRESS=<sender@yourdomain.com>
+EMAIL_FROM_NAME=MapleSense Alerts
 ```
 
 **Generate secrets:**
@@ -149,13 +166,14 @@ mosquitto_passwd -c mosquitto/config/passwd <username>
 
 ## Step 5: Verify Docker Hub Images Exist
 
-Make sure these images are pushed to Docker Hub:
+Make sure these images are pushed to Docker Hub (use `./push-to-dockerhub.sh` to build and push all):
 
 - `maplesense/mptt-server-mosquitto:v1.0.0`
 - `maplesense/mptt-server-api:v1.0.0`
 - `maplesense/mptt-server-frontend:v1.0.0`
 - `maplesense/mptt-server-bridge:v1.0.0`
 - `maplesense/mptt-server-ingestor:v1.0.0`
+- `maplesense/mptt-server-email:v1.0.0`
 
 **Check on Docker Hub:** https://hub.docker.com/r/maplesense
 

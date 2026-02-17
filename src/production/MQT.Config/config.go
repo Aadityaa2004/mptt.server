@@ -293,7 +293,7 @@ func LoadApiConfig() (*Config, error) {
 			BucketThreshold: getInt("ALERT_BUCKET_THRESHOLD", 75),
 			ResetThreshold:  getInt("ALERT_RESET_THRESHOLD", 70),
 			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
-			EmailServiceURL: getEnv("EMAIL_SERVICE_URL", "http://mqt-email:9004"),
+			EmailServiceURL: getEnv("EMAIL_SERVICE_URL", "http://mqt-email-service:9004"),
 		},
 	}
 

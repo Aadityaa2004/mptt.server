@@ -30,7 +30,7 @@ if [ ! -f ".env.production" ]; then
     else
         echo -e "${YELLOW}Please create .env.production with your configuration values.${NC}"
     fi
-    echo -e "${YELLOW}You can run: ./setup-env.sh to set it up interactively${NC}"
+    echo -e "${YELLOW}Copy env.production.example to .env.production and fill in your values.${NC}"
     exit 1
 fi
 

@@ -11,6 +11,7 @@ This document describes how nginx routes requests to the frontend (Next.js) vs t
 | `/pis`, `/pis/*` | `api-service:9002` | Pi CRUD (Go) |
 | `/stats`, `/stats/*` | `api-service:9002` | Stats endpoints (Go) |
 | `/readings`, `/readings/*` | `api-service:9002` | Readings (Go) |
+| `/email`, `/email/*` | `mqt-email-service:9004` | MQT EmailService (alerts, health) |
 | `/health`, `/health/*` | `api-service:9002` | Health checks (Go) |
 | `/mqtt` | `mosquitto:9001` | MQTT WebSocket |
 | `/` (all other) | `mqt-frontend:3000` | Next.js frontend |

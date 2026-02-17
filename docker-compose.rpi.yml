@@ -180,6 +180,20 @@ services:
       # OpenWeather API Configuration
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
       
+      # Email (Brevo SMTP) - API calls EmailService for alerts
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-brevo}
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_ENCRYPTION=${SMTP_ENCRYPTION:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-MapleSense Alerts}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-}
+      - ALERT_BUCKET_THRESHOLD=${ALERT_BUCKET_THRESHOLD:-75}
+      - ALERT_RESET_THRESHOLD=${ALERT_RESET_THRESHOLD:-70}
+      - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
+      - EMAIL_SERVICE_URL=http://mqt-email-service:9004
+      
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped
@@ -189,6 +203,30 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - mqtt-network
+
+  # MQT Email Alert Service
+  mqt-email-service:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-email:${IMAGE_TAG:-latest}
+    container_name: mqt-email-service
+    env_file:
+      - .env.production
+    expose:
+      - "9004"
+    environment:
+      - PORT=9004
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_ENCRYPTION=${SMTP_ENCRYPTION:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-MapleSense Alerts}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-}
+      - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
+      - ALERT_RESET_THRESHOLD=${ALERT_RESET_THRESHOLD:-70}
+      - TZ=Etc/UTC
+    restart: unless-stopped
     networks:
       - mqtt-network
 
@@ -222,6 +260,7 @@ services:
     depends_on:
       - mqt-frontend
       - api-service
+      - mqt-email-service
     ports:
       - "80:80" # Local HTTP entrypoint; Cloudflare Tunnel also targets this
     volumes:

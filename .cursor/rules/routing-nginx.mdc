@@ -18,6 +18,8 @@ When adding or changing API endpoints, ensure nginx routing stays in sync.
 
 4. **Frontend API calls**: Paths in `apiClient.apiFetch()` are appended to `API_BASE_URL`. Use `/pis` not `/api/pis` for Pi endpoints; use `/api/auth/login` for auth.
 
+5. **MQT Email Service**: `location /email/` proxies to `mqt-email-service:9004` in both `nginx/default.conf` and `nginx/default-http-only.conf`.
+
 ## Checklist for New Endpoints
 
 - [ ] Backend route added in controller

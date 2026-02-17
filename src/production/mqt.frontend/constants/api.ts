@@ -1,11 +1,12 @@
 // Base URLs should NOT include the `/api` prefix, because all
 // endpoint paths below already start with `/api/...`.
-// Final URLs look like: https://orpheus-networks.com + /api/auth/login
+// Local: use http://localhost:9002 (direct to API) or http://localhost (via nginx).
+// Production: set NEXT_PUBLIC_* at build time (e.g. https://orpheus-networks.com).
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://orpheus-networks.com";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9002";
 
 export const READINGS_API_BASE_URL =
-  process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "https://orpheus-networks.com";
+  process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "http://localhost:9002";
 
 export const API_ENDPOINTS = {
   AUTH: {

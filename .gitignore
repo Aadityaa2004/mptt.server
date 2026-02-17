@@ -2,7 +2,10 @@
 .env
 .env.local
 .env.production
+.env.production.example
+.env.rpi.local
 .env.staging
+docker-compose.rpi.override.yml
 .cus
 .claude
 
@@ -38,6 +41,7 @@ logs/
 
 # Docker
 .dockerignore
+.cursor/
 
 # Certificates and keys
 *.pem

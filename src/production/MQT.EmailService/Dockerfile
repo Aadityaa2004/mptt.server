@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /bin/email-service \
-    ./src/production/MQT.Email
+    ./src/production/MQT.EmailService
 
 # Stage 2: Runtime (distroless)
 FROM gcr.io/distroless/base-debian12

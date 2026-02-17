@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Email/cooldown"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Email/handlers"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Email/service"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/cooldown"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/handlers"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/service"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	log.Printf("MQT.Email service starting on port %s", port)
+	log.Printf("MQT.EmailService starting on port %s", port)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Email/cooldown"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Email/service"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/cooldown"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/service"
 )
 
 type AlertHandler struct {
