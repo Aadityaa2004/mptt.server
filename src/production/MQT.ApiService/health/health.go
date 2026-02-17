@@ -184,6 +184,13 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		CREATE INDEX IF NOT EXISTS idx_roles_name ON roles (name);
 	`
 
+	// Add bucket dimension columns to devices table (for existing databases)
+	alterDevicesTable := `
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS height DOUBLE PRECISION;
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS top_diameter DOUBLE PRECISION;
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS bottom_diameter DOUBLE PRECISION;
+	`
+
 	queries := []string{
 		createUsersTable,
 		createPisTable,
@@ -191,6 +198,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		createReadingsTable,
 		createRolesTable,
 		createIndexes,
+		alterDevicesTable,
 	}
 
 	for _, query := range queries {

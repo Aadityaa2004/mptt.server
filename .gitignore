@@ -4,6 +4,7 @@
 .env.production
 .env.staging
 .cus
+.claude
 
 # Go specific
 *.exe

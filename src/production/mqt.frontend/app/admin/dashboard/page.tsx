@@ -81,6 +81,9 @@ export default function AdminDashboardPage() {
   });
   const [deviceFormData, setDeviceFormData] = useState({
     device_id: "",
+    height: "",
+    top_diameter: "",
+    bottom_diameter: "",
   });
 
   useEffect(() => {
@@ -685,10 +688,16 @@ export default function AdminDashboardPage() {
       
       await adminService.createDevice(selectedPi.pi_id, {
         device_id: deviceId,
+        ...(deviceFormData.height ? { height: parseFloat(deviceFormData.height) } : {}),
+        ...(deviceFormData.top_diameter ? { top_diameter: parseFloat(deviceFormData.top_diameter) } : {}),
+        ...(deviceFormData.bottom_diameter ? { bottom_diameter: parseFloat(deviceFormData.bottom_diameter) } : {}),
       });
       setShowDeviceForm(false);
-      setDeviceFormData({ 
-        device_id: "", 
+      setDeviceFormData({
+        device_id: "",
+        height: "",
+        top_diameter: "",
+        bottom_diameter: "",
       });
       await loadDevices(selectedPi.pi_id);
       // Refresh overview statistics
@@ -1400,14 +1409,57 @@ export default function AdminDashboardPage() {
                           <X className="h-5 w-5" />
                         </button>
                       </div>
-                      <div>
-                        <label className="text-sm text-white/60 font-light mb-1 block">Device ID</label>
-                        <Input
-                          placeholder="Number (e.g., 1) or MAC Address (e.g., AA:BB:CC:DD:EE:FF)"
-                          value={deviceFormData.device_id}
-                          onChange={(e) => setDeviceFormData({ ...deviceFormData, device_id: e.target.value })}
-                          className="bg-black/50 border-white/10"
-                        />
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm text-white/60 font-light mb-1 block">Device ID</label>
+                          <Input
+                            placeholder="Number (e.g., 1) or MAC Address (e.g., AA:BB:CC:DD:EE:FF)"
+                            value={deviceFormData.device_id}
+                            onChange={(e) => setDeviceFormData({ ...deviceFormData, device_id: e.target.value })}
+                            className="bg-black/50 border-white/10"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-white/60 font-light mb-1 block">Bucket Dimensions (optional, in cm)</label>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Input
+                                type="number"
+                                placeholder="Height"
+                                value={deviceFormData.height}
+                                onChange={(e) => setDeviceFormData({ ...deviceFormData, height: e.target.value })}
+                                className="bg-black/50 border-white/10"
+                                min="0"
+                                step="0.1"
+                              />
+                              <span className="text-xs text-white/40 font-light">Height</span>
+                            </div>
+                            <div>
+                              <Input
+                                type="number"
+                                placeholder="Top Diameter"
+                                value={deviceFormData.top_diameter}
+                                onChange={(e) => setDeviceFormData({ ...deviceFormData, top_diameter: e.target.value })}
+                                className="bg-black/50 border-white/10"
+                                min="0"
+                                step="0.1"
+                              />
+                              <span className="text-xs text-white/40 font-light">Top Diameter</span>
+                            </div>
+                            <div>
+                              <Input
+                                type="number"
+                                placeholder="Bottom Diameter"
+                                value={deviceFormData.bottom_diameter}
+                                onChange={(e) => setDeviceFormData({ ...deviceFormData, bottom_diameter: e.target.value })}
+                                className="bg-black/50 border-white/10"
+                                min="0"
+                                step="0.1"
+                              />
+                              <span className="text-xs text-white/40 font-light">Bottom Diameter</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <div className="flex gap-2 mt-4">
                         <Button 
@@ -1546,6 +1598,7 @@ export default function AdminDashboardPage() {
                         <th className="px-4 py-3 text-left text-sm font-light">Device ID</th>
                         <th className="px-4 py-3 text-left text-sm font-light">Temperature</th>
                         <th className="px-4 py-3 text-left text-sm font-light">Level</th>
+                        <th className="px-4 py-3 text-left text-sm font-light">Fill %</th>
                         <th className="px-4 py-3 text-left text-sm font-light">Battery</th>
                       </tr>
                     </thead>
@@ -1571,6 +1624,11 @@ export default function AdminDashboardPage() {
                           <td className="px-4 py-3 text-sm font-light">
                             {reading.payload.sensors.level
                               ? `${reading.payload.sensors.level.value} ${reading.payload.sensors.level.unit}`
+                              : "N/A"}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-light">
+                            {reading.fill_percentage !== undefined
+                              ? <span className={reading.fill_percentage >= 75 ? "text-orange-400 font-medium" : ""}>{reading.fill_percentage.toFixed(1)}%</span>
                               : "N/A"}
                           </td>
                           <td className="px-4 py-3 text-sm font-light">
@@ -1773,6 +1831,7 @@ export default function AdminDashboardPage() {
                                 <th className="px-4 py-3 text-left text-sm font-light">Device ID</th>
                                 <th className="px-4 py-3 text-left text-sm font-light">Temperature</th>
                                 <th className="px-4 py-3 text-left text-sm font-light">Level</th>
+                                <th className="px-4 py-3 text-left text-sm font-light">Fill %</th>
                                 <th className="px-4 py-3 text-left text-sm font-light">Battery</th>
                               </tr>
                             </thead>
@@ -1793,6 +1852,11 @@ export default function AdminDashboardPage() {
                                   <td className="px-4 py-3 text-sm font-light">
                                     {reading.payload.sensors.level
                                       ? `${reading.payload.sensors.level.value} ${reading.payload.sensors.level.unit}`
+                                      : "N/A"}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-light">
+                                    {reading.fill_percentage !== undefined
+                                      ? <span className={reading.fill_percentage >= 75 ? "text-orange-400 font-medium" : ""}>{reading.fill_percentage.toFixed(1)}%</span>
                                       : "N/A"}
                                   </td>
                                   <td className="px-4 py-3 text-sm font-light">

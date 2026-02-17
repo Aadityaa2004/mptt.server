@@ -1,12 +1,17 @@
 package controllers
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
+	config "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Config"
 	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
@@ -16,14 +21,18 @@ type InternalController struct {
 	piRepo      interfaces.PiRepository
 	deviceRepo  interfaces.DeviceRepository
 	readingRepo interfaces.ReadingRepository
+	userRepo    interfaces.UserRepository
+	config      *config.Config
 }
 
 // NewInternalController creates a new internal controller
-func NewInternalController(piRepo interfaces.PiRepository, deviceRepo interfaces.DeviceRepository, readingRepo interfaces.ReadingRepository) *InternalController {
+func NewInternalController(piRepo interfaces.PiRepository, deviceRepo interfaces.DeviceRepository, readingRepo interfaces.ReadingRepository, userRepo interfaces.UserRepository, cfg *config.Config) *InternalController {
 	return &InternalController{
 		piRepo:      piRepo,
 		deviceRepo:  deviceRepo,
 		readingRepo: readingRepo,
+		userRepo:    userRepo,
+		config:      cfg,
 	}
 }
 
@@ -155,10 +164,68 @@ func (c *InternalController) CreateReading(ctx *gin.Context) {
 		return
 	}
 
+	// Check if we should send a bucket fill alert (fire-and-forget)
+	if req.Payload.Sensors.Level != nil {
+		go c.checkAndSendAlert(req.PiID, req.DeviceID, req.Payload.Sensors.Level.Value)
+	}
+
 	ctx.JSON(http.StatusCreated, CreateReadingResponse{
 		Success: true,
 		Error:   "",
 	})
+}
+
+// checkAndSendAlert calculates fill percentage and sends alert to email service if threshold exceeded
+func (c *InternalController) checkAndSendAlert(piID, deviceID string, sensorDistance float64) {
+	device, err := c.deviceRepo.GetDevice(context.Background(), piID, deviceID)
+	if err != nil || device == nil {
+		return
+	}
+
+	// Skip if dimensions not set
+	if device.Height <= 0 || device.TopDiameter <= 0 || device.BottomDiameter <= 0 {
+		return
+	}
+
+	fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, sensorDistance)
+
+	threshold := float64(c.config.Alert.BucketThreshold)
+	if fillPct < threshold {
+		return
+	}
+
+	// Look up the user who owns this device
+	user, err := c.userRepo.GetUserByDeviceID(context.Background(), deviceID)
+	if err != nil || user == nil {
+		return
+	}
+
+	// Send alert to email service
+	alertPayload := map[string]interface{}{
+		"user_email":      user.Email,
+		"user_name":       user.Username,
+		"device_id":       deviceID,
+		"fill_percentage": fillPct,
+	}
+
+	body, err := json.Marshal(alertPayload)
+	if err != nil {
+		log.Printf("Failed to marshal alert payload: %v", err)
+		return
+	}
+
+	emailURL := c.config.Alert.EmailServiceURL + "/alerts/bucket-fill"
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Post(emailURL, "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("Failed to send alert to email service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		log.Printf("Email service returned status %d for device %s", resp.StatusCode, deviceID)
+	}
 }
 
 // RegisterRoutes registers the internal API routes

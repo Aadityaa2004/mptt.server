@@ -19,23 +19,23 @@ func NewPostgresDeviceRepository(db *sql.DB) *PostgresDeviceRepository {
 // Create device (idempotent upsert)
 func (r *PostgresDeviceRepository) CreateOrUpdateDevice(ctx context.Context, device hardware_models.Device) error {
 	query := `
-		INSERT INTO devices (pi_id, device_id, created_at) 
-		VALUES ($1, $2, NOW())
-		ON CONFLICT (pi_id, device_id) 
-		DO NOTHING
+		INSERT INTO devices (pi_id, device_id, height, top_diameter, bottom_diameter, created_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
+		ON CONFLICT (pi_id, device_id)
+		DO UPDATE SET height = EXCLUDED.height, top_diameter = EXCLUDED.top_diameter, bottom_diameter = EXCLUDED.bottom_diameter
 	`
 
-	_, err := r.db.ExecContext(ctx, query, device.PiID, device.DeviceID)
+	_, err := r.db.ExecContext(ctx, query, device.PiID, device.DeviceID, device.Height, device.TopDiameter, device.BottomDiameter)
 	return err
 }
 
 // Read devices
 func (r *PostgresDeviceRepository) GetDevice(ctx context.Context, piID string, deviceID string) (*hardware_models.Device, error) {
-	query := `SELECT pi_id, device_id FROM devices WHERE pi_id = $1 AND device_id = $2`
+	query := `SELECT pi_id, device_id, COALESCE(height, 0), COALESCE(top_diameter, 0), COALESCE(bottom_diameter, 0) FROM devices WHERE pi_id = $1 AND device_id = $2`
 
 	var device hardware_models.Device
 
-	err := r.db.QueryRowContext(ctx, query, piID, deviceID).Scan(&device.PiID, &device.DeviceID)
+	err := r.db.QueryRowContext(ctx, query, piID, deviceID).Scan(&device.PiID, &device.DeviceID, &device.Height, &device.TopDiameter, &device.BottomDiameter)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, sql.ErrNoRows
@@ -48,7 +48,7 @@ func (r *PostgresDeviceRepository) GetDevice(ctx context.Context, piID string, d
 
 func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID string, page, pageSize int) (*interfaces.PaginationResult, error) {
 	offset := (page - 1) * pageSize
-	query := `SELECT pi_id, device_id FROM devices WHERE pi_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT pi_id, device_id, COALESCE(height, 0), COALESCE(top_diameter, 0), COALESCE(bottom_diameter, 0) FROM devices WHERE pi_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.QueryContext(ctx, query, piID, pageSize, offset)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID str
 	for rows.Next() {
 		var device hardware_models.Device
 
-		if err := rows.Scan(&device.PiID, &device.DeviceID); err != nil {
+		if err := rows.Scan(&device.PiID, &device.DeviceID, &device.Height, &device.TopDiameter, &device.BottomDiameter); err != nil {
 			return nil, err
 		}
 
@@ -86,8 +86,22 @@ func (r *PostgresDeviceRepository) ListDevicesByPi(ctx context.Context, piID str
 
 // Update device
 func (r *PostgresDeviceRepository) UpdateDevice(ctx context.Context, device hardware_models.Device) error {
-	// No updatable fields remain on the Device schema; this is a no-op.
-	// We keep the method to satisfy the interface.
+	query := `UPDATE devices SET height = $1, top_diameter = $2, bottom_diameter = $3 WHERE pi_id = $4 AND device_id = $5`
+
+	result, err := r.db.ExecContext(ctx, query, device.Height, device.TopDiameter, device.BottomDiameter, device.PiID, device.DeviceID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
 	return nil
 }
 

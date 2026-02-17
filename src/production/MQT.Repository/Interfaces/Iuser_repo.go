@@ -31,4 +31,7 @@ type UserRepository interface {
 
 	// Delete user
 	Delete(ctx context.Context, userID string, hardDelete bool) error
+
+	// GetUserByDeviceID finds the user whose locations JSONB array contains the given device_id
+	GetUserByDeviceID(ctx context.Context, deviceID string) (*auth_models.User, error)
 }

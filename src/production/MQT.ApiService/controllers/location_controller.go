@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	service "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/implementation/auth"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 	auth_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/auth"
+	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,12 +15,14 @@ import (
 // LocationController handles device location management requests
 type LocationController struct {
 	authService *service.AuthService
+	deviceRepo  interfaces.DeviceRepository
 }
 
 // NewLocationController creates a new location controller
-func NewLocationController(authService *service.AuthService) *LocationController {
+func NewLocationController(authService *service.AuthService, deviceRepo interfaces.DeviceRepository) *LocationController {
 	return &LocationController{
 		authService: authService,
+		deviceRepo:  deviceRepo,
 	}
 }
 
@@ -112,6 +116,11 @@ func (h *LocationController) AddLocation(c *gin.Context) {
 		return
 	}
 
+	// Sync bucket dimensions to the devices table
+	if location.Height > 0 || location.TopDiameter > 0 || location.BottomDiameter > 0 {
+		h.syncDeviceDimensions(c, location)
+	}
+
 	// Find and return the newly added location
 	var addedLocation *auth_models.DeviceLocation
 	for i := range updatedUser.Locations {
@@ -187,6 +196,11 @@ func (h *LocationController) UpdateLocation(c *gin.Context) {
 		return
 	}
 
+	// Sync bucket dimensions to the devices table
+	if location.Height > 0 || location.TopDiameter > 0 || location.BottomDiameter > 0 {
+		h.syncDeviceDimensions(c, location)
+	}
+
 	// Find and return the updated location
 	var updatedLocation *auth_models.DeviceLocation
 	for i := range updatedUser.Locations {
@@ -259,3 +273,22 @@ func (h *LocationController) DeleteLocation(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "location deleted successfully"})
 }
+
+// syncDeviceDimensions updates the devices table with bucket dimensions from a location
+func (h *LocationController) syncDeviceDimensions(c *gin.Context, location auth_models.DeviceLocation) {
+	device, err := h.deviceRepo.GetDevice(c.Request.Context(), location.PiID, location.DeviceID)
+	if err != nil {
+		// Device may not exist in devices table yet - log and continue
+		log.Printf("Could not find device %s/%s to sync dimensions: %v", location.PiID, location.DeviceID, err)
+		return
+	}
+
+	device.Height = location.Height
+	device.TopDiameter = location.TopDiameter
+	device.BottomDiameter = location.BottomDiameter
+
+	if err := h.deviceRepo.UpdateDevice(c.Request.Context(), *device); err != nil {
+		log.Printf("Failed to sync dimensions to devices table for %s/%s: %v", location.PiID, location.DeviceID, err)
+	}
+}
+

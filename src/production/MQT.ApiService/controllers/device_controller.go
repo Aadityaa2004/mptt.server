@@ -46,7 +46,10 @@ func (c *DeviceController) RegisterRoutes(router *gin.Engine) {
 }
 
 type CreateDeviceRequest struct {
-	DeviceID string `json:"device_id" binding:"required"`
+	DeviceID       string  `json:"device_id" binding:"required"`
+	Height         float64 `json:"height,omitempty"`
+	TopDiameter    float64 `json:"top_diameter,omitempty"`
+	BottomDiameter float64 `json:"bottom_diameter,omitempty"`
 }
 
 func (c *DeviceController) CreateDevice(ctx *gin.Context) {
@@ -59,8 +62,11 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 	}
 
 	device := hardware_models.Device{
-		PiID:     piID,
-		DeviceID: req.DeviceID,
+		PiID:           piID,
+		DeviceID:       req.DeviceID,
+		Height:         req.Height,
+		TopDiameter:    req.TopDiameter,
+		BottomDiameter: req.BottomDiameter,
 	}
 
 	if err := c.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
@@ -133,12 +139,20 @@ func (c *DeviceController) GetDevice(ctx *gin.Context) {
 }
 
 type UpdateDeviceRequest struct {
-	// No updatable fields on Device schema; request body is intentionally empty.
+	Height         *float64 `json:"height,omitempty"`
+	TopDiameter    *float64 `json:"top_diameter,omitempty"`
+	BottomDiameter *float64 `json:"bottom_diameter,omitempty"`
 }
 
 func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
 	deviceID := ctx.Param("device_id")
+
+	var req UpdateDeviceRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Get existing device
 	existingDevice, err := c.deviceRepo.GetDevice(ctx, piID, deviceID)
@@ -149,6 +163,17 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Update fields if provided
+	if req.Height != nil {
+		existingDevice.Height = *req.Height
+	}
+	if req.TopDiameter != nil {
+		existingDevice.TopDiameter = *req.TopDiameter
+	}
+	if req.BottomDiameter != nil {
+		existingDevice.BottomDiameter = *req.BottomDiameter
 	}
 
 	if err := c.deviceRepo.UpdateDevice(ctx, *existingDevice); err != nil {

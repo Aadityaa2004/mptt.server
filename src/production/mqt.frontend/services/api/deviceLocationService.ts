@@ -9,6 +9,9 @@ export interface DeviceLocation {
   latitude: number;
   longitude: number;
   color?: string; // Hex color code (e.g., "#FF5733")
+  height?: number; // Bucket height in cm
+  top_diameter?: number; // Bucket top diameter in cm
+  bottom_diameter?: number; // Bucket bottom diameter in cm
 }
 
 export interface DeviceLocationsResponse {
@@ -73,6 +76,9 @@ const deviceLocationService = {
         latitude: location.latitude,
         longitude: location.longitude,
         ...(location.color && { color: location.color }),
+        ...(location.height && { height: location.height }),
+        ...(location.top_diameter && { top_diameter: location.top_diameter }),
+        ...(location.bottom_diameter && { bottom_diameter: location.bottom_diameter }),
       }),
     });
 
@@ -96,6 +102,9 @@ const deviceLocationService = {
         latitude: location.latitude,
         longitude: location.longitude,
         ...(location.color && { color: location.color }),
+        ...(location.height !== undefined && { height: location.height }),
+        ...(location.top_diameter !== undefined && { top_diameter: location.top_diameter }),
+        ...(location.bottom_diameter !== undefined && { bottom_diameter: location.bottom_diameter }),
       }),
     });
 

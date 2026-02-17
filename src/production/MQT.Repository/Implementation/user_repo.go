@@ -275,6 +275,33 @@ func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]
 	return users, nil
 }
 
+// GetUserByDeviceID finds the user whose locations JSONB array contains the given device_id
+func (r *PostgresUserRepository) GetUserByDeviceID(ctx context.Context, deviceID string) (*auth_models.User, error) {
+	query := `SELECT user_id, username, email, password, role, active, latitude, longitude, locations, created_at, updated_at FROM users WHERE locations @> $1::jsonb`
+
+	searchJSON := fmt.Sprintf(`[{"device_id": "%s"}]`, deviceID)
+
+	var user auth_models.User
+	var locationsJSON []byte
+
+	err := r.db.QueryRowContext(ctx, query, searchJSON).Scan(&user.UserID, &user.Username, &user.Email,
+		&user.Password, &user.Role, &user.Active, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if len(locationsJSON) > 0 {
+		if err := json.Unmarshal(locationsJSON, &user.Locations); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal locations: %w", err)
+		}
+	}
+
+	return &user, nil
+}
+
 // Delete user
 func (r *PostgresUserRepository) Delete(ctx context.Context, userID string, hardDelete bool) error {
 	var query string
