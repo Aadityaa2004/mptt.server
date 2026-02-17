@@ -355,6 +355,8 @@ CREATE TABLE readings (
 
 ## API Endpoints
 
+> **Adding new endpoints?** See [ROUTING.md](ROUTING.md) for nginx routing rules to avoid 404s in production.
+
 ### **API Service** (Port 9002) - Single Service for All Operations
 
 #### **Health & Monitoring**
