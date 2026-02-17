@@ -319,10 +319,21 @@ export const adminService = {
       failure_count: number;
     };
   } | null> {
+    // The ingestor health endpoint is only reachable on the internal
+    // Docker network (localhost on the Pi). From the public web UI
+    // (e.g. orpheus-networks.com) the browser is not allowed to access
+    // loopback addresses, which would cause noisy CORS errors.
+    //
+    // To avoid that, only attempt this check when running on localhost
+    // during development; in all other cases, return null quietly.
+    if (typeof window === "undefined" || window.location.hostname !== "localhost") {
+      return Promise.resolve(null);
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch("http://localhost:9003/health", {
         method: "GET",
         headers: {
@@ -330,9 +341,9 @@ export const adminService = {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         return null;
       }
@@ -349,10 +360,16 @@ export const adminService = {
     mqtt: boolean;
     status: string;
   } | null> {
+    // Same reasoning as getIngestorHealth: avoid browser calls to
+    // localhost when the app is served from a public domain.
+    if (typeof window === "undefined" || window.location.hostname !== "localhost") {
+      return Promise.resolve(null);
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch("http://localhost:9002/health/ready", {
         method: "GET",
         headers: {
@@ -360,9 +377,9 @@ export const adminService = {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         return null;
       }

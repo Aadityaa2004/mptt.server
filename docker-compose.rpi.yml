@@ -214,8 +214,8 @@ services:
   # Nginx Reverse Proxy (HTTP-only on RPi)
   nginx:
     build:
-      context: .
-      dockerfile: ./nginx/Dockerfile
+      context: ./nginx
+      dockerfile: Dockerfile
     container_name: nginx-proxy
     depends_on:
       - mqt-frontend
@@ -231,7 +231,8 @@ services:
     networks:
       - mqtt-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      # /health isn't defined in nginx config; use / which should return 200
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -244,12 +245,15 @@ services:
     restart: unless-stopped
     depends_on:
       - nginx
+    env_file:
+      - .env.production
     environment:
       # Token from Cloudflare dashboard for this tunnel
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     # cloudflared will be configured in Cloudflare to route
     # orpheus-networks.com -> http://nginx:80 via this tunnel
-    command: tunnel --no-autoupdate run
+    # Force HTTP/2 instead of QUIC to avoid campus/firewall issues
+    command: tunnel --no-autoupdate run --protocol http2
     networks:
       - mqtt-network
 
@@ -268,7 +272,5 @@ volumes:
 networks:
   mqtt-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
 
+    

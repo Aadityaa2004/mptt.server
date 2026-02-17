@@ -1,5 +1,8 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9002";
-export const READINGS_API_BASE_URL = process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "http://localhost:9002";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://orpheus-networks.com/api";
+
+export const READINGS_API_BASE_URL =
+  process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "https://orpheus-networks.com/api";
 
 export const API_ENDPOINTS = {
   AUTH: {
