@@ -1,0 +1,278 @@
+services:
+  # MQTT Broker (Mosquitto) - Production
+  mosquitto:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-mosquitto:${IMAGE_TAG:-latest}
+    container_name: mqtt-broker-prod
+    env_file:
+      - .env.production
+    # All listeners are internal on the Docker network.
+    # External access SHOULD go via nginx/Cloudflare Tunnel (e.g. WSS /mqtt).
+    volumes:
+      - mosq-data:/mosquitto/data
+      - mosq-logs:/mosquitto/log
+      - ./mosquitto/certs:/mosquitto/certs:ro
+      - ./mosquitto/config/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/config/acl:/mosquitto/config/acl:ro
+    environment:
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-h", "localhost", "-t", "$$SYS/broker/uptime", "-m", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: postgresql-prod
+    env_file:
+      - .env.production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-iot}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-iot}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # MQTT Bridge - Forwards messages from external broker to local broker
+  mqtt-bridge:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-bridge:${IMAGE_TAG:-latest}
+    container_name: mqtt-bridge-prod
+    env_file:
+      - .env.production
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      # External Broker Configuration (where your RPi sensors connect)
+      - EXTERNAL_BROKER_HOST=${EXTERNAL_BROKER_HOST:-}
+      - EXTERNAL_BROKER_PORT=${EXTERNAL_BROKER_PORT:-1883}
+      - EXTERNAL_BROKER_USER=${EXTERNAL_BROKER_USER:-}
+      - EXTERNAL_BROKER_PASS=${EXTERNAL_BROKER_PASS:-}
+      
+      # Local Broker Configuration (Docker Mosquitto)
+      - LOCAL_BROKER_HOST=mosquitto
+      - LOCAL_BROKER_PORT=1883
+      - LOCAL_BROKER_USER=${BROKER_USER:-}
+      - LOCAL_BROKER_PASS=${BROKER_PASS:-}
+      
+      # Topic Configuration
+      - TOPIC_FILTER=${TOPIC_FILTER:-sensors/#}
+      
+      # Timezone
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('mosquitto', 1883), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # MQTT Ingestor Service - Standalone data ingestion
+  mqtt-ingestor:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-ingestor:${IMAGE_TAG:-latest}
+    container_name: mqtt-ingestor-prod
+    env_file:
+      - .env.production
+    depends_on:
+      - mosquitto
+      - api-service
+    # Health endpoint is only needed inside the Docker network
+    expose:
+      - "9003"
+    environment:
+      # Health Server
+      - INGESTOR_PORT=9003
+      
+      # API Service Configuration
+      - API_SERVICE_URL=http://api-service:9002
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      
+      # MQTT Broker Configuration (Production)
+      - BROKER_HOST=mosquitto
+      - BROKER_PORT=1883
+      - BROKER_TLS=${BROKER_TLS:-false}
+      - BROKER_USER=${BROKER_USER:-}
+      - BROKER_PASS=${BROKER_PASS:-}
+      - BROKER_CA_FILE=${BROKER_CA_FILE:-}
+      
+      # MQTT Subscription Configuration
+      - MQTT_TOPIC=${MQTT_TOPIC:-sensors/#}
+      - MQTT_CLIENT_ID=${MQTT_CLIENT_ID:-mqtt-ingestor-prod}
+      - MQTT_SHARED_GROUP=${MQTT_SHARED_GROUP:-}
+      
+      # Batch Processing Configuration
+      - BATCH_SIZE=${BATCH_SIZE:-200}
+      - BATCH_WINDOW=${BATCH_WINDOW:-1s}
+      
+      # Timezone
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # API Service - REST API with authentication
+  api-service:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-api:${IMAGE_TAG:-latest}
+    container_name: api-service-prod
+    env_file:
+      - .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # API is only reachable via nginx on the Docker network
+    expose:
+      - "9002"
+    environment:
+      # HTTP Server
+      - PORT=9002
+      
+      # PostgreSQL Configuration
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-iot}
+      - POSTGRES_SSLMODE=${POSTGRES_SSLMODE:-disable}
+      
+      # Service-to-Service Authentication
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      
+      # Auth Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ISSUER=mpt-api-service
+      - JWT_ACCESS_TOKEN_DURATION=${JWT_ACCESS_TOKEN_DURATION:-24h}
+      - JWT_REFRESH_TOKEN_DURATION=${JWT_REFRESH_TOKEN_DURATION:-168h}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      
+      # CORS Configuration - Production domain
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://orpheus-networks.com,https://www.orpheus-networks.com}
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Origin,Content-Type,Accept,Authorization,token
+      - CORS_EXPOSED_HEADERS=Content-Length
+      - CORS_ALLOW_CREDENTIALS=true
+      - CORS_MAX_AGE=43200
+      
+      # OpenWeather API Configuration
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      
+      # Timezone
+      - TZ=Etc/UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mqtt-network
+
+  # MQT Frontend - Next.js web application
+  mqt-frontend:
+    image: ${DOCKERHUB_USERNAME}/mptt-server-frontend:${IMAGE_TAG:-latest}
+    container_name: mqt-frontend-prod
+    env_file:
+      - .env.production
+    depends_on:
+      - api-service
+    # Frontend is only reachable via nginx on the Docker network
+    expose:
+      - "3000"
+    environment:
+      - TZ=Etc/UTC
+      # Base URLs should NOT include `/api` because frontend endpoints
+      # already start with `/api/...`.
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-https://orpheus-networks.com}
+      - NEXT_PUBLIC_READINGS_API_BASE_URL=${NEXT_PUBLIC_READINGS_API_BASE_URL:-https://orpheus-networks.com}
+    restart: unless-stopped
+    networks:
+      - mqtt-network
+
+  # Nginx Reverse Proxy (HTTP-only on RPi)
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx-proxy
+    depends_on:
+      - mqt-frontend
+      - api-service
+    ports:
+      - "80:80" # Local HTTP entrypoint; Cloudflare Tunnel also targets this
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default-http-only.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    restart: unless-stopped
+    networks:
+      - mqtt-network
+    healthcheck:
+      # /health isn't defined in nginx config; use / which should return 200
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Cloudflare Tunnel connector
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    env_file:
+      - .env.production
+    environment:
+      # Token from Cloudflare dashboard for this tunnel
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    # cloudflared will be configured in Cloudflare to route
+    # orpheus-networks.com -> http://nginx:80 via this tunnel
+    # Force HTTP/2 instead of QUIC to avoid campus/firewall issues
+    command: tunnel --no-autoupdate run --protocol http2
+    networks:
+      - mqtt-network
+
+volumes:
+  mosq-data:
+    driver: local
+  mosq-logs:
+    driver: local
+  postgres-data:
+    driver: local
+  certbot-etc:
+    driver: local
+  certbot-www:
+    driver: local
+
+networks:
+  mqtt-network:
+    driver: bridge
+
+    
