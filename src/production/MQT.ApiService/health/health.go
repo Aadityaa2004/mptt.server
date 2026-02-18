@@ -191,6 +191,32 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		ALTER TABLE devices ADD COLUMN IF NOT EXISTS bottom_diameter DOUBLE PRECISION;
 	`
 
+	// Create verification_tokens table for OTP and password reset
+	createVerificationTokensTable := `
+		CREATE TABLE IF NOT EXISTS verification_tokens (
+			id          TEXT PRIMARY KEY,
+			email       TEXT NOT NULL,
+			token_hash  TEXT NOT NULL,
+			purpose     TEXT NOT NULL,
+			metadata    JSONB,
+			expires_at  TIMESTAMPTZ NOT NULL,
+			used_at     TIMESTAMPTZ,
+			created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
+		CREATE INDEX IF NOT EXISTS idx_verification_tokens_email_purpose ON verification_tokens (email, purpose);
+		CREATE INDEX IF NOT EXISTS idx_verification_tokens_expires_at ON verification_tokens (expires_at);
+	`
+
+	// Add email_verified_at column to users table (for existing databases)
+	alterUsersTable := `
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+	`
+
+	// Add metadata column to verification_tokens (for existing databases)
+	alterVerificationTokensTable := `
+		ALTER TABLE verification_tokens ADD COLUMN IF NOT EXISTS metadata JSONB;
+	`
+
 	queries := []string{
 		createUsersTable,
 		createPisTable,
@@ -199,6 +225,9 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		createRolesTable,
 		createIndexes,
 		alterDevicesTable,
+		createVerificationTokensTable,
+		alterUsersTable,
+		alterVerificationTokensTable,
 	}
 
 	for _, query := range queries {

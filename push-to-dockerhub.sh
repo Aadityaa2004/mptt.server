@@ -24,10 +24,12 @@ if [ -z "$DOCKERHUB_USERNAME" ]; then
 fi
 
 # Image tags (you can customize these)
+# For RPi: use VERSION=v1.0.0 and ensure IMAGE_TAG=v1.0.0 in .env.production
 VERSION=${VERSION:-latest}
 PROJECT_NAME="mptt-server"
 
-echo -e "${GREEN}Building and pushing images to Docker Hub as ${DOCKERHUB_USERNAME}${NC}\n"
+echo -e "${GREEN}Building and pushing images to Docker Hub as ${DOCKERHUB_USERNAME}${NC}"
+echo -e "${YELLOW}Tag: ${VERSION} (set VERSION=v1.0.0 for RPi deployment)${NC}\n"
 
 # Login to Docker Hub
 echo -e "${YELLOW}Logging in to Docker Hub...${NC}"

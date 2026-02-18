@@ -186,6 +186,9 @@ services:
       # Email Service URL
       - EMAIL_SERVICE_URL=http://mqt-email-service:9004
 
+      # Frontend base URL (for password reset links in emails)
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped

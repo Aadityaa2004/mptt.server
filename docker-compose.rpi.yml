@@ -142,6 +142,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mqt-email-service:
+        condition: service_started
     # API is only reachable via nginx on the Docker network
     expose:
       - "9002"
@@ -193,6 +195,7 @@ services:
       - ALERT_RESET_THRESHOLD=${ALERT_RESET_THRESHOLD:-70}
       - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-720}
       - EMAIL_SERVICE_URL=http://mqt-email-service:9004
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-https://orpheus-networks.com}
       
       # Timezone
       - TZ=Etc/UTC

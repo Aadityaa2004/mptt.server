@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
+  verifyEmail: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => void;
 }
@@ -135,19 +136,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshIntervalRef.current = null;
       }
       clearTokens();
-      
+
       const response = await authService.register({
         username,
         email,
         password,
       });
 
-      // If registration doesn't provide tokens (backend design), redirect to login
-      if (!response || !response.access_token) {
-        // Don't set user state - they need to login first
-        router.push("/login");
+      // Registration requires email verification - redirect to verify-email
+      if (response.requires_verification) {
+        router.push(`/verify-email?email=${encodeURIComponent(response.email)}`);
         return;
       }
+
+      // Fallback: if tokens were provided (e.g. admin flow), set user
+      const token = getAccessToken();
+      if (token && response?.id) {
+        setUser({
+          user_id: response.id,
+          username: response.username,
+          email: response.email,
+          role: response.role,
+        });
+        if (response.role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/user/dashboard");
+        }
+      } else {
+        router.push("/login");
+      }
+    } catch (error) {
+      throw error;
+    }
+  }, [router]);
+
+  const verifyEmail = useCallback(async (email: string, otp: string) => {
+    try {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      clearTokens();
+
+      const response: AuthResponse = await authService.verifyEmail(email, otp);
 
       setUser({
         user_id: response.user_id,
@@ -156,7 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: response.role,
       });
 
-      // Navigate based on role (should always be "user" for registration)
       if (response.role === "admin") {
         router.push("/admin/dashboard");
       } else {
@@ -179,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        verifyEmail,
         logout,
         checkAuth,
       }}

@@ -85,10 +85,10 @@ IMAGE_TAG=v1.0.0
 # Cloudflare Tunnel Token (from Cloudflare dashboard)
 CLOUDFLARE_TUNNEL_TOKEN=<your-token-here>
 
-# Domain Configuration
+# Domain Configuration (base URLs should NOT include /api - frontend paths already do)
 DOMAIN=orpheus-networks.com
-NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com/api
-NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com/api
+NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com
+NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com
 CORS_ALLOWED_ORIGINS=https://orpheus-networks.com,https://www.orpheus-networks.com
 
 # Database Configuration
@@ -118,11 +118,13 @@ MQTT_CLIENT_ID=mqtt-ingestor-prod
 # OpenWeather API Key
 OPENWEATHER_API_KEY=14ef204fbb7a18e0dda966c94fe7533b
 
-# Email (Brevo SMTP) - for MQT EmailService alerts
+# Email (Brevo SMTP) - for OTP verification, password reset, and alerts
 SMTP_USERNAME=<brevo-smtp-login>
 SMTP_PASSWORD=<brevo-smtp-key>
 EMAIL_FROM_ADDRESS=<sender@yourdomain.com>
 EMAIL_FROM_NAME=MapleSense Alerts
+# Frontend URL for password reset links in emails
+FRONTEND_BASE_URL=https://orpheus-networks.com
 ```
 
 **Generate secrets:**
@@ -164,9 +166,17 @@ mosquitto_passwd -c mosquitto/config/passwd <username>
 
 ---
 
-## Step 5: Verify Docker Hub Images Exist
+## Step 5: Build and Push Docker Images (from dev machine)
 
-Make sure these images are pushed to Docker Hub (use `./push-to-dockerhub.sh` to build and push all):
+**Important – Raspberry Pi is ARM64:** Build images on an **Apple Silicon Mac (M1/M2/M3)** or directly on the Pi. Building on an Intel Mac produces amd64 images that won't run on the Pi.
+
+```bash
+# From project root on your dev machine
+export VERSION=v1.0.0   # Must match IMAGE_TAG in .env.production
+./push-to-dockerhub.sh
+```
+
+Make sure these images exist on Docker Hub:
 
 - `maplesense/mptt-server-mosquitto:v1.0.0`
 - `maplesense/mptt-server-api:v1.0.0`
@@ -176,6 +186,8 @@ Make sure these images are pushed to Docker Hub (use `./push-to-dockerhub.sh` to
 - `maplesense/mptt-server-email:v1.0.0`
 
 **Check on Docker Hub:** https://hub.docker.com/r/maplesense
+
+**If you're on Intel Mac:** Either build on the Pi, or use `docker buildx build --platform linux/arm64` for multi-arch images (see push script for options).
 
 ---
 

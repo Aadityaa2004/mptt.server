@@ -35,3 +35,12 @@ export interface User {
   role: UserRole;
 }
 
+export interface RegisterResponse {
+  id?: string; // Only present after verification; not set during pending signup
+  username: string;
+  email: string;
+  role: UserRole;
+  requires_verification: boolean;
+  message: string;
+}
+

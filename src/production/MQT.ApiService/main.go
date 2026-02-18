@@ -54,6 +54,7 @@ func main() {
 	piRepo := implementation.NewPostgresPiRepository(db)
 	deviceRepo := implementation.NewPostgresDeviceRepository(db)
 	roleRepo := implementation.NewPostgresRoleRepository(db)
+	verificationTokenRepo := implementation.NewPostgresVerificationTokenRepository(db)
 
 	// Get configuration
 	config := ctr.GetConfig()
@@ -77,8 +78,15 @@ func main() {
 	}
 	authMiddlewareInstance := authMiddleware.NewAuthMiddleware(jwtService, rbacService, middlewareConfig)
 
+	// Initialize verification service for OTP and password reset
+	verificationService := authService.NewVerificationService(
+		verificationTokenRepo,
+		config.Alert.EmailServiceURL,
+		config.FrontendBaseURL,
+	)
+
 	// Initialize auth services
-	authServiceInstance := authService.NewAuthService(userRepo, roleRepo, jwtService, rbacService)
+	authServiceInstance := authService.NewAuthService(userRepo, roleRepo, jwtService, rbacService, verificationService)
 	userServiceInstance := authService.NewUserService(userRepo)
 
 	// Initialize role initializer

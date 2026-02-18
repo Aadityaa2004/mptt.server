@@ -44,17 +44,18 @@ func (a *DeviceLocationArray) Scan(value interface{}) error {
 
 // User represents a user in the system
 type User struct {
-	UserID    string              `json:"user_id" db:"user_id"`
-	Username  string              `json:"username" db:"username"`
-	Email     string              `json:"email" db:"email"`
-	Password  string              `json:"-" db:"password"` // Password is not exposed in JSON
-	Role      string              `json:"role" db:"role"`
-	Active    bool                `json:"active" db:"active"`
-	Latitude  *float64            `json:"latitude,omitempty" db:"latitude"`
-	Longitude *float64            `json:"longitude,omitempty" db:"longitude"`
-	Locations DeviceLocationArray `json:"locations,omitempty" db:"locations"`
-	CreatedAt time.Time           `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at" db:"updated_at"`
+	UserID         string              `json:"user_id" db:"user_id"`
+	Username       string              `json:"username" db:"username"`
+	Email          string              `json:"email" db:"email"`
+	Password       string              `json:"-" db:"password"` // Password is not exposed in JSON
+	Role           string              `json:"role" db:"role"`
+	Active         bool                `json:"active" db:"active"`
+	EmailVerifiedAt *time.Time         `json:"email_verified_at,omitempty" db:"email_verified_at"`
+	Latitude       *float64            `json:"latitude,omitempty" db:"latitude"`
+	Longitude      *float64            `json:"longitude,omitempty" db:"longitude"`
+	Locations      DeviceLocationArray `json:"locations,omitempty" db:"locations"`
+	CreatedAt      time.Time           `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time           `json:"updated_at" db:"updated_at"`
 }
 
 // NewUser creates a new User instance

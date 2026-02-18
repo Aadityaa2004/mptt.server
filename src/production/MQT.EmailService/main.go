@@ -30,9 +30,12 @@ func main() {
 	emailSvc := service.NewEmailService(smtpHost, smtpPort, smtpEncryption, smtpUsername, smtpPassword, fromName, fromAddress)
 	cooldownTracker := cooldown.NewTracker(cooldownMinutes, resetThreshold)
 	alertHandler := handlers.NewAlertHandler(emailSvc, cooldownTracker)
+	emailHandler := handlers.NewEmailHandler(emailSvc)
 
 	router := gin.Default()
 	router.POST("/alerts/bucket-fill", alertHandler.HandleBucketFillAlert)
+	router.POST("/send-otp", emailHandler.SendOTP)
+	router.POST("/send-password-reset", emailHandler.SendPasswordReset)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
