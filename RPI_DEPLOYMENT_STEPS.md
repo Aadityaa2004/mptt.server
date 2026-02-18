@@ -189,6 +189,13 @@ Make sure these images exist on Docker Hub:
 
 **If you're on Intel Mac:** Either build on the Pi, or use `docker buildx build --platform linux/arm64` for multi-arch images (see push script for options).
 
+**If `mqt-email-service` shows "exec format error":** The email image may be amd64. Build it on the Pi (from repo root):
+```bash
+# Replace with your DOCKERHUB_USERNAME and IMAGE_TAG from .env.production
+docker build -t maplesense/mptt-server-email:v1.0.5 -f src/production/MQT.EmailService/Dockerfile .
+docker compose -f docker-compose.rpi.yml up -d mqt-email-service
+```
+
 ---
 
 ## Step 6: Login to Docker Hub (if pulling private images)

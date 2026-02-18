@@ -17,9 +17,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# TARGETARCH set by buildx for multi-platform; default amd64 for plain docker build
-ARG TARGETARCH=amd64
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+# Use TARGETARCH from buildx when set; otherwise use build host arch (so native build on Pi = arm64)
+ARG TARGETARCH
+RUN export GOARCH=${TARGETARCH:-$(go env GOARCH)} && \
+    CGO_ENABLED=0 GOOS=linux go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /bin/email-service \
