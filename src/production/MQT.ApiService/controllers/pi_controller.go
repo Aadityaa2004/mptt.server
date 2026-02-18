@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 )
 
 // PiController handles Pi management requests
@@ -76,9 +75,8 @@ func (c *PiController) CreatePi(ctx *gin.Context) {
 	}
 
 	pi := hardware_models.Pi{
-		PiID:      req.PiID,
-		UserID:    req.UserID,
-		CreatedAt: time.Now(),
+		PiID:   req.PiID,
+		UserID: req.UserID,
 	}
 
 	if err := c.piRepo.CreateOrUpdatePi(ctx, pi); err != nil {

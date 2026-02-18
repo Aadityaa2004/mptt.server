@@ -21,6 +21,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, userID string) (*auth_models.User, error)
 	FindByID(ctx context.Context, userID string) (*auth_models.User, error)
 	GetByUsername(ctx context.Context, username string) (*auth_models.User, error)
+	GetByEmail(ctx context.Context, email string) (*auth_models.User, error)
 	GetAll(ctx context.Context) ([]*auth_models.User, error)
 	List(ctx context.Context, page, pageSize int, role string) (*PaginationResult, error)
 	GetUser(ctx context.Context, userID string) (*auth_models.User, error)
@@ -31,4 +32,7 @@ type UserRepository interface {
 
 	// Delete user
 	Delete(ctx context.Context, userID string, hardDelete bool) error
+
+	// GetUserByDeviceID finds the user whose locations JSONB array contains the given device_id
+	GetUserByDeviceID(ctx context.Context, deviceID string) (*auth_models.User, error)
 }

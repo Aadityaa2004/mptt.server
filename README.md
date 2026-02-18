@@ -261,6 +261,44 @@ The architecture is now properly decoupled and follows microservice best practic
    docker-compose logs -f mqtt-bridge
    ```
 
+### Local vs production routing
+
+The codebase supports both environments with the same repo:
+
+| Where you run | Compose file | API / frontend base URL | CORS |
+|---------------|--------------|-------------------------|------|
+| **Dev machine (local)** | `docker-compose.yml` | `http://localhost:9002` | `http://localhost:3000` |
+| **RPi / production** | `docker-compose.rpi.yml` + `.env.production` | `https://orpheus-networks.com` | `https://orpheus-networks.com` |
+
+- **Local (`docker-compose up`)**: Frontend is built with `NEXT_PUBLIC_API_BASE_URL=http://localhost:9002`; no nginx; you open the app at `http://localhost:3000` and it talks to the API at `http://localhost:9002`.
+- **Production**: Frontend image is built with orpheus URLs (e.g. via `./push-to-dockerhub.sh`); nginx and Cloudflare Tunnel handle routing and TLS.
+
+The frontend fallback in code is `http://localhost:9002` so that unset env = local. Production images are built with explicit `NEXT_PUBLIC_*` URLs.
+
+### Testing the RPi stack locally (same routing as production)
+
+To run the full RPi stack (including nginx) on your dev machine with **localhost** instead of orpheus-networks.com:
+
+1. **Copy the override and local env example**
+   ```bash
+   cp docker-compose.rpi.override.example.yml docker-compose.rpi.override.yml
+   cp env.rpi.local.example .env.rpi.local
+   # Edit .env.rpi.local with your DB, JWT, etc. (or keep .env.production and only override will change CORS/URLs)
+   ```
+
+2. **Run with the override** (builds frontend with localhost; nginx uses `default-local.conf`)
+   ```bash
+   docker compose -f docker-compose.rpi.yml -f docker-compose.rpi.override.yml --env-file .env.rpi.local up --build
+   ```
+   Or if you already have `.env.production` and only want CORS + frontend URLs overridden:
+   ```bash
+   docker compose -f docker-compose.rpi.yml -f docker-compose.rpi.override.yml up --build
+   ```
+
+3. **Open** `http://localhost` — routing matches production (all traffic through nginx), but with localhost and no Cloudflare.
+
+`docker-compose.rpi.override.yml` and `.env.rpi.local` are gitignored so they stay local.
+
 ## Data Model
 
 ### **Database Schema (PostgreSQL)**
@@ -354,6 +392,8 @@ CREATE TABLE readings (
 ```
 
 ## API Endpoints
+
+> **Adding new endpoints?** See [ROUTING.md](ROUTING.md) for nginx routing rules to avoid 404s in production.
 
 ### **API Service** (Port 9002) - Single Service for All Operations
 

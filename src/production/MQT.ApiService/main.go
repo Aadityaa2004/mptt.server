@@ -54,6 +54,7 @@ func main() {
 	piRepo := implementation.NewPostgresPiRepository(db)
 	deviceRepo := implementation.NewPostgresDeviceRepository(db)
 	roleRepo := implementation.NewPostgresRoleRepository(db)
+	verificationTokenRepo := implementation.NewPostgresVerificationTokenRepository(db)
 
 	// Get configuration
 	config := ctr.GetConfig()
@@ -77,8 +78,15 @@ func main() {
 	}
 	authMiddlewareInstance := authMiddleware.NewAuthMiddleware(jwtService, rbacService, middlewareConfig)
 
+	// Initialize verification service for OTP and password reset
+	verificationService := authService.NewVerificationService(
+		verificationTokenRepo,
+		config.Alert.EmailServiceURL,
+		config.FrontendBaseURL,
+	)
+
 	// Initialize auth services
-	authServiceInstance := authService.NewAuthService(userRepo, roleRepo, jwtService, rbacService)
+	authServiceInstance := authService.NewAuthService(userRepo, roleRepo, jwtService, rbacService, verificationService)
 	userServiceInstance := authService.NewUserService(userRepo)
 
 	// Initialize role initializer
@@ -121,17 +129,19 @@ func main() {
 	router.Use(cors.New(corsConfig))
 
 	// Create controllers and register routes
-	authController := controllers.NewAuthController(authServiceInstance)
+	authController := controllers.NewAuthController(authServiceInstance, config.OpenWeatherAPIKey)
 	userController := controllers.NewUserController(userServiceInstance)
+	locationController := controllers.NewLocationController(authServiceInstance, deviceRepo)
 	piController := controllers.NewPiController(piRepo, userRepo, logger, authMiddlewareInstance)
 	deviceController := controllers.NewDeviceController(deviceRepo, piRepo, logger, authMiddlewareInstance)
-	readingController := controllers.NewReadingController(readingRepo, piRepo, logger, authMiddlewareInstance)
+	readingController := controllers.NewReadingController(readingRepo, piRepo, deviceRepo, logger, authMiddlewareInstance)
 	healthController := controllers.NewHealthController(readingRepo, piRepo, logger, authMiddlewareInstance)
-	internalController := controllers.NewInternalController(piRepo, deviceRepo, readingRepo)
+	internalController := controllers.NewInternalController(piRepo, deviceRepo, readingRepo, userRepo, config)
 
 	// Register all routes
 	authController.RegisterRoutes(router, authMiddlewareInstance)
 	userController.RegisterRoutes(router, authMiddlewareInstance)
+	locationController.RegisterRoutes(router, authMiddlewareInstance)
 	piController.RegisterRoutes(router)
 	deviceController.RegisterRoutes(router)
 	readingController.RegisterRoutes(router)

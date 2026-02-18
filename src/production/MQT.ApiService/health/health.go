@@ -124,6 +124,9 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 			password    TEXT NOT NULL,
 			role        TEXT NOT NULL,
 			active      BOOLEAN NOT NULL DEFAULT true,
+			latitude    DOUBLE PRECISION,
+			longitude   DOUBLE PRECISION,
+			locations   JSONB DEFAULT '[]'::jsonb,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
@@ -143,8 +146,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 	createDevicesTable := `
 		CREATE TABLE IF NOT EXISTS devices (
 			pi_id       TEXT NOT NULL,
-			device_id   INTEGER NOT NULL,
-			device_type TEXT,
+			device_id   TEXT NOT NULL,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			PRIMARY KEY (pi_id, device_id),
 			FOREIGN KEY (pi_id) REFERENCES pis(pi_id) ON DELETE CASCADE
@@ -155,7 +157,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 	createReadingsTable := `
 		CREATE TABLE IF NOT EXISTS readings (
 			pi_id       TEXT NOT NULL,
-			device_id   INTEGER NOT NULL,
+			device_id   TEXT NOT NULL,
 			ts          TIMESTAMPTZ NOT NULL,
 			payload     JSONB NOT NULL,
 			PRIMARY KEY (pi_id, device_id, ts),
@@ -182,6 +184,39 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		CREATE INDEX IF NOT EXISTS idx_roles_name ON roles (name);
 	`
 
+	// Add bucket dimension columns to devices table (for existing databases)
+	alterDevicesTable := `
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS height DOUBLE PRECISION;
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS top_diameter DOUBLE PRECISION;
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS bottom_diameter DOUBLE PRECISION;
+	`
+
+	// Create verification_tokens table for OTP and password reset
+	createVerificationTokensTable := `
+		CREATE TABLE IF NOT EXISTS verification_tokens (
+			id          TEXT PRIMARY KEY,
+			email       TEXT NOT NULL,
+			token_hash  TEXT NOT NULL,
+			purpose     TEXT NOT NULL,
+			metadata    JSONB,
+			expires_at  TIMESTAMPTZ NOT NULL,
+			used_at     TIMESTAMPTZ,
+			created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
+		CREATE INDEX IF NOT EXISTS idx_verification_tokens_email_purpose ON verification_tokens (email, purpose);
+		CREATE INDEX IF NOT EXISTS idx_verification_tokens_expires_at ON verification_tokens (expires_at);
+	`
+
+	// Add email_verified_at column to users table (for existing databases)
+	alterUsersTable := `
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+	`
+
+	// Add metadata column to verification_tokens (for existing databases)
+	alterVerificationTokensTable := `
+		ALTER TABLE verification_tokens ADD COLUMN IF NOT EXISTS metadata JSONB;
+	`
+
 	queries := []string{
 		createUsersTable,
 		createPisTable,
@@ -189,6 +224,10 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		createReadingsTable,
 		createRolesTable,
 		createIndexes,
+		alterDevicesTable,
+		createVerificationTokensTable,
+		alterUsersTable,
+		alterVerificationTokensTable,
 	}
 
 	for _, query := range queries {

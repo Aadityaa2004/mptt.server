@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
-	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
 )
 
 // DeviceController handles Device management requests
@@ -47,8 +46,10 @@ func (c *DeviceController) RegisterRoutes(router *gin.Engine) {
 }
 
 type CreateDeviceRequest struct {
-	DeviceID   int    `json:"device_id" binding:"required"`
-	DeviceType string `json:"device_type" binding:"required"`
+	DeviceID       string  `json:"device_id" binding:"required"`
+	Height         float64 `json:"height,omitempty"`
+	TopDiameter    float64 `json:"top_diameter,omitempty"`
+	BottomDiameter float64 `json:"bottom_diameter,omitempty"`
 }
 
 func (c *DeviceController) CreateDevice(ctx *gin.Context) {
@@ -61,10 +62,11 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 	}
 
 	device := hardware_models.Device{
-		PiID:       piID,
-		DeviceID:   req.DeviceID,
-		DeviceType: req.DeviceType,
-		CreatedAt:  time.Now(),
+		PiID:           piID,
+		DeviceID:       req.DeviceID,
+		Height:         req.Height,
+		TopDiameter:    req.TopDiameter,
+		BottomDiameter: req.BottomDiameter,
 	}
 
 	if err := c.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
@@ -106,12 +108,7 @@ func (c *DeviceController) ListDevices(ctx *gin.Context) {
 
 func (c *DeviceController) GetDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	device, err := c.deviceRepo.GetDevice(ctx, piID, deviceID)
 	if err != nil {
@@ -142,15 +139,18 @@ func (c *DeviceController) GetDevice(ctx *gin.Context) {
 }
 
 type UpdateDeviceRequest struct {
-	DeviceType *string `json:"device_type,omitempty"`
+	Height         *float64 `json:"height,omitempty"`
+	TopDiameter    *float64 `json:"top_diameter,omitempty"`
+	BottomDiameter *float64 `json:"bottom_diameter,omitempty"`
 }
 
 func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
+	deviceID := ctx.Param("device_id")
+
+	var req UpdateDeviceRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -165,15 +165,15 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 		return
 	}
 
-	var req UpdateDeviceRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// Update fields if provided
+	if req.Height != nil {
+		existingDevice.Height = *req.Height
 	}
-
-	// Update device_type if provided
-	if req.DeviceType != nil {
-		existingDevice.DeviceType = *req.DeviceType
+	if req.TopDiameter != nil {
+		existingDevice.TopDiameter = *req.TopDiameter
+	}
+	if req.BottomDiameter != nil {
+		existingDevice.BottomDiameter = *req.BottomDiameter
 	}
 
 	if err := c.deviceRepo.UpdateDevice(ctx, *existingDevice); err != nil {
@@ -186,12 +186,7 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 
 func (c *DeviceController) DeleteDevice(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	cascade := ctx.DefaultQuery("cascade", "false") == "true"
 

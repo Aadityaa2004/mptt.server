@@ -20,8 +20,8 @@ type ReadingQueryParams struct {
 // ReadingQueryResult represents the result of a reading query with pagination
 type ReadingQueryResult struct {
 	Items         []hardware_models.Reading `json:"items"`
-	NextPageToken *string             `json:"next_page_token,omitempty"`
-	Total         int                 `json:"total,omitempty"`
+	NextPageToken *string                   `json:"next_page_token,omitempty"`
+	Total         int                       `json:"total,omitempty"`
 }
 
 // SummaryStats represents aggregate statistics
@@ -49,11 +49,11 @@ type ReadingRepository interface {
 	// Query operations with pagination
 	GetLatestReadings(ctx context.Context, piID string) ([]hardware_models.Reading, error)
 	GetReadings(ctx context.Context, params ReadingQueryParams) (*ReadingQueryResult, error)
-	GetReadingsByDevice(ctx context.Context, piID string, deviceID int, params ReadingQueryParams) (*ReadingQueryResult, error)
+	GetReadingsByDevice(ctx context.Context, piID string, deviceID string, params ReadingQueryParams) (*ReadingQueryResult, error)
 
 	// Statistics
 	GetSummaryStats(ctx context.Context, params ReadingQueryParams) (*SummaryStats, error)
 
 	// Delete operations
-	DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID int, start, end time.Time) error
+	DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID string, start, end time.Time) error
 }

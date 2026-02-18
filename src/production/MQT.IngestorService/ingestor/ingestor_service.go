@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -106,37 +105,60 @@ func (i *Ingestor) IsConnected() bool {
 func (i *Ingestor) onMessage(_ mqtt.Client, m mqtt.Message) {
 	i.logger.Logger.Debug().Str("topic", m.Topic()).Str("payload", string(m.Payload())).Msg("Received MQTT message")
 
-	var payload map[string]interface{}
-	if err := json.Unmarshal(m.Payload(), &payload); err != nil {
-		payload = map[string]interface{}{"raw": string(m.Payload())}
+	var msg hardware_models.IngestedMqttMessage
+	if err := json.Unmarshal(m.Payload(), &msg); err != nil {
+		i.logger.Logger.Error().Err(err).Str("raw_payload", string(m.Payload())).Msg("Failed to unmarshal MQTT payload into IngestedMqttMessage")
+		// Fallback: keep raw payload for debugging
+		msg = hardware_models.IngestedMqttMessage{
+			MqttEnvelope: hardware_models.MqttEnvelope{
+				Topic:   m.Topic(),
+				Payload: hardware_models.ReadingPayload{},
+			},
+		}
 	}
 
-	// Parse topic to extract pi_id and device_id
-	// Expected format: sensors/<pi_id>/<device_id>/<metric>
-	parts := strings.Split(m.Topic(), "/")
-	if len(parts) < 4 {
-		i.logger.Logger.Warn().Str("topic", m.Topic()).Str("expected", "sensors/<pi_id>/<device_id>/<metric>").Msg("Invalid topic format")
-		// Try to extract pi_id and device_id from what we have for error reporting
-		piID := "unknown"
-		deviceID := "unknown"
-		if len(parts) >= 2 {
+	envelope := msg.MqttEnvelope
+
+	// Prefer IDs from the payload, fall back to topic parsing if needed.
+	piID := envelope.Payload.PiID
+	deviceID := envelope.Payload.DeviceID
+
+	if piID == "" || deviceID == "" {
+		// Parse topic to extract pi_id and device_id as a fallback
+		// Expected format: sensors/<pi_id>/<device_id>/<metric>
+		parts := strings.Split(m.Topic(), "/")
+		if len(parts) < 4 {
+			i.logger.Logger.Warn().Str("topic", m.Topic()).Str("expected", "sensors/<pi_id>/<device_id>/<metric>").Msg("Invalid topic format and missing IDs in payload")
+			// Try to extract pi_id and device_id from what we have for error reporting
+			if piID == "" {
+				piID = "unknown"
+				if len(parts) >= 2 {
+					piID = parts[1]
+				}
+			}
+			if deviceID == "" {
+				deviceID = "unknown"
+				if len(parts) >= 3 {
+					deviceID = parts[2]
+				}
+			}
+			i.publishError(piID, deviceID, "invalid_topic", fmt.Sprintf("Invalid topic format: %s, expected: sensors/<pi_id>/<device_id>/<metric>", m.Topic()))
+			return
+		}
+
+		if piID == "" {
 			piID = parts[1]
 		}
-		if len(parts) >= 3 {
+		if deviceID == "" {
 			deviceID = parts[2]
 		}
-		i.publishError(piID, deviceID, "invalid_topic", fmt.Sprintf("Invalid topic format: %s, expected: sensors/<pi_id>/<device_id>/<metric>", m.Topic()))
-		return
 	}
-
-	piID := parts[1]     // e.g., sensors/pi_001/temperature/humidity -> pi_001
-	deviceID := parts[2] // e.g., sensors/pi_001/temperature/humidity -> temperature
 
 	reading := hardware_models.ReadingWithTopic{
 		PiID:       piID,
 		DeviceID:   deviceID,
-		Topic:      m.Topic(),
-		Payload:    payload,
+		Topic:      envelope.Topic,
+		Payload:    envelope.Payload,
 		ReceivedAt: time.Now().UTC(),
 	}
 
@@ -157,13 +179,6 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 
 		// Process each reading in the batch
 		for _, readingWithTopic := range batch {
-			// Convert deviceID string to int
-			deviceIDInt, err := strconv.Atoi(readingWithTopic.DeviceID)
-			if err != nil {
-				i.logger.Logger.Error().Err(err).Str("device_id", readingWithTopic.DeviceID).Msg("Error converting device_id to int")
-				continue
-			}
-
 			// Validate Pi exists via API
 			piExists, err := i.apiClient.ValidatePi(ctx, readingWithTopic.PiID)
 			if err != nil {
@@ -178,23 +193,38 @@ func (i *Ingestor) batchWriter(ctx context.Context) {
 			}
 
 			// Validate device exists via API
-			deviceExists, err := i.apiClient.ValidateDevice(ctx, readingWithTopic.PiID, deviceIDInt)
+			deviceExists, err := i.apiClient.ValidateDevice(ctx, readingWithTopic.PiID, readingWithTopic.DeviceID)
 			if err != nil {
-				i.logger.Logger.Error().Err(err).Str("pi_id", readingWithTopic.PiID).Int("device_id", deviceIDInt).Msg("Failed to validate Device via API")
-				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_validation_error", fmt.Sprintf("Failed to validate Device %d: %v", deviceIDInt, err))
+				i.logger.Logger.Error().Err(err).Str("pi_id", readingWithTopic.PiID).Str("device_id", readingWithTopic.DeviceID).Msg("Failed to validate Device via API")
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_validation_error", fmt.Sprintf("Failed to validate Device %s: %v", readingWithTopic.DeviceID, err))
 				continue
 			}
 			if !deviceExists {
-				i.logger.Logger.Warn().Str("pi_id", readingWithTopic.PiID).Int("device_id", deviceIDInt).Msg("Skipping reading: device not found")
-				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_not_found", fmt.Sprintf("Device %d does not exist for Pi %s", deviceIDInt, readingWithTopic.PiID))
+				i.logger.Logger.Warn().Str("pi_id", readingWithTopic.PiID).Str("device_id", readingWithTopic.DeviceID).Msg("Skipping reading: device not found")
+				i.publishError(readingWithTopic.PiID, readingWithTopic.DeviceID, "device_not_found", fmt.Sprintf("Device %s does not exist for Pi %s", readingWithTopic.DeviceID, readingWithTopic.PiID))
 				continue
+			}
+
+			// Determine reading timestamp: prefer payload timestamp, fall back to received_at
+			ts := readingWithTopic.ReceivedAt
+			if readingWithTopic.Payload.Timestamp != "" {
+				if parsed, err := time.Parse(time.RFC3339Nano, readingWithTopic.Payload.Timestamp); err == nil {
+					ts = parsed
+				} else {
+					i.logger.Logger.Warn().
+						Err(err).
+						Str("pi_id", readingWithTopic.PiID).
+						Str("device_id", readingWithTopic.DeviceID).
+						Str("timestamp", readingWithTopic.Payload.Timestamp).
+						Msg("Failed to parse payload timestamp, using received_at instead")
+				}
 			}
 
 			// Create reading via API
 			reading := hardware_models.Reading{
 				PiID:     readingWithTopic.PiID,
-				DeviceID: deviceIDInt,
-				Ts:       readingWithTopic.ReceivedAt,
+				DeviceID: readingWithTopic.DeviceID,
+				Ts:       ts,
 				Payload:  readingWithTopic.Payload,
 			}
 			if err := i.apiClient.CreateReading(ctx, reading); err != nil {

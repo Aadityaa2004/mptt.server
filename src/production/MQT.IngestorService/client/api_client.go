@@ -75,7 +75,7 @@ type ValidatePiResponse struct {
 // ValidateDeviceRequest represents the request to validate a Device
 type ValidateDeviceRequest struct {
 	PiID     string `json:"pi_id"`
-	DeviceID int    `json:"device_id"`
+	DeviceID string `json:"device_id"`
 }
 
 // ValidateDeviceResponse represents the response from Device validation
@@ -86,10 +86,10 @@ type ValidateDeviceResponse struct {
 
 // CreateReadingRequest represents the request to create a reading
 type CreateReadingRequest struct {
-	PiID     string                 `json:"pi_id"`
-	DeviceID int                    `json:"device_id"`
-	Ts       time.Time              `json:"ts"`
-	Payload  map[string]interface{} `json:"payload"`
+	PiID     string                         `json:"pi_id"`
+	DeviceID string                         `json:"device_id"`
+	Ts       time.Time                      `json:"ts"`
+	Payload  hardware_models.ReadingPayload `json:"payload"`
 }
 
 // CreateReadingResponse represents the response from reading creation
@@ -225,7 +225,7 @@ func (c *APIClient) ValidatePi(ctx context.Context, piID string) (bool, error) {
 }
 
 // ValidateDevice checks if a Device exists for a given Pi
-func (c *APIClient) ValidateDevice(ctx context.Context, piID string, deviceID int) (bool, error) {
+func (c *APIClient) ValidateDevice(ctx context.Context, piID string, deviceID string) (bool, error) {
 	var result bool
 	var resultErr error
 

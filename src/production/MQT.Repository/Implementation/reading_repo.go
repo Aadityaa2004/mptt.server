@@ -101,7 +101,7 @@ func (r *PostgresReadingRepository) scanReadings(rows *sql.Rows) ([]hardware_mod
 	return readings, rows.Err()
 }
 
-func (r *PostgresReadingRepository) DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID int, start, end time.Time) error {
+func (r *PostgresReadingRepository) DeleteReadingsByTimeRange(ctx context.Context, piID string, deviceID string, start, end time.Time) error {
 	query := `DELETE FROM readings WHERE pi_id = $1 AND device_id = $2 AND ts BETWEEN $3 AND $4`
 
 	_, err := r.db.ExecContext(ctx, query, piID, deviceID, start, end)
@@ -141,12 +141,8 @@ func (r *PostgresReadingRepository) GetReadings(ctx context.Context, params inte
 	}
 
 	if params.DeviceID != "" {
-		deviceIDInt, err := strconv.Atoi(params.DeviceID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid device_id: %w", err)
-		}
 		query += fmt.Sprintf(" AND device_id = $%d", argIndex)
-		args = append(args, deviceIDInt)
+		args = append(args, params.DeviceID)
 		argIndex++
 	}
 
@@ -189,7 +185,7 @@ func (r *PostgresReadingRepository) GetReadings(ctx context.Context, params inte
 	return result, nil
 }
 
-func (r *PostgresReadingRepository) GetReadingsByDevice(ctx context.Context, piID string, deviceID int, params interfaces.ReadingQueryParams) (*interfaces.ReadingQueryResult, error) {
+func (r *PostgresReadingRepository) GetReadingsByDevice(ctx context.Context, piID string, deviceID string, params interfaces.ReadingQueryParams) (*interfaces.ReadingQueryResult, error) {
 	offset := (params.Page - 1) * params.Limit
 
 	query := `SELECT pi_id, device_id, ts, payload FROM readings WHERE pi_id = $1 AND device_id = $2`
@@ -247,12 +243,8 @@ func (r *PostgresReadingRepository) GetSummaryStats(ctx context.Context, params 
 	}
 
 	if params.DeviceID != "" {
-		deviceIDInt, err := strconv.Atoi(params.DeviceID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid device_id: %w", err)
-		}
 		query += fmt.Sprintf(" AND device_id = $%d", argIndex)
-		args = append(args, deviceIDInt)
+		args = append(args, params.DeviceID)
 		argIndex++
 	}
 

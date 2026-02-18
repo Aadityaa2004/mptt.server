@@ -49,6 +49,10 @@ func (h *UserController) RegisterRoutes(router *gin.Engine, authMiddleware *midd
 		users.PUT("/:id/role",
 			authMiddleware.RequireAdmin(),
 			h.UpdateUserRole)
+
+		// Get user by device ID
+		users.GET("/by-device/:device_id",
+			h.GetUserByDeviceID)
 	}
 }
 
@@ -105,9 +109,11 @@ func (h *UserController) UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
 
 	var req struct {
-		Username string `json:"username,omitempty"`
-		Email    string `json:"email,omitempty"`
-		Password string `json:"password,omitempty"`
+		Username  string   `json:"username,omitempty"`
+		Email     string   `json:"email,omitempty"`
+		Password  string   `json:"password,omitempty"`
+		Latitude  *float64 `json:"latitude,omitempty"`
+		Longitude *float64 `json:"longitude,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -142,6 +148,12 @@ func (h *UserController) UpdateUser(c *gin.Context) {
 			return
 		}
 		user.Password = hashedPassword
+	}
+	if req.Latitude != nil {
+		user.Latitude = req.Latitude
+	}
+	if req.Longitude != nil {
+		user.Longitude = req.Longitude
 	}
 
 	// Update user in database
@@ -178,6 +190,24 @@ func (h *UserController) DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}
+
+// GetUserByDeviceID retrieves the user associated with a device
+func (h *UserController) GetUserByDeviceID(c *gin.Context) {
+	deviceID := c.Param("device_id")
+
+	user, err := h.userService.GetUserByDeviceID(c.Request.Context(), deviceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no user found for device"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 // UpdateUserRole updates a user's role

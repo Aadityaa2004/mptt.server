@@ -1,29 +1,33 @@
 package controllers
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
-	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/middleware"
+	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
+	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
+	interfaces "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Repository/Interfaces"
 )
 
 // ReadingController handles Reading management requests
 type ReadingController struct {
 	readingRepo    interfaces.ReadingRepository
 	piRepo         interfaces.PiRepository
+	deviceRepo     interfaces.DeviceRepository
 	logger         *logger.Logger
 	authMiddleware *middleware.AuthMiddleware
 }
 
 // NewReadingController creates a new reading controller
-func NewReadingController(readingRepo interfaces.ReadingRepository, piRepo interfaces.PiRepository, logger *logger.Logger, authMiddleware *middleware.AuthMiddleware) *ReadingController {
+func NewReadingController(readingRepo interfaces.ReadingRepository, piRepo interfaces.PiRepository, deviceRepo interfaces.DeviceRepository, logger *logger.Logger, authMiddleware *middleware.AuthMiddleware) *ReadingController {
 	return &ReadingController{
 		readingRepo:    readingRepo,
 		piRepo:         piRepo,
+		deviceRepo:     deviceRepo,
 		logger:         logger,
 		authMiddleware: authMiddleware,
 	}
@@ -38,6 +42,90 @@ func (c *ReadingController) RegisterRoutes(router *gin.Engine) {
 		readings.GET("", c.authMiddleware.Authenticate(), c.GetReadings)
 		readings.GET("/pis/:pi_id/devices/:device_id", c.authMiddleware.Authenticate(), c.GetDeviceReadings)
 	}
+}
+
+// calculateFillPercentage computes the fill percentage for a frustum-shaped bucket.
+// height, topDiameter, bottomDiameter are bucket dimensions (cm).
+// sensorDistance is the top-down distance from sensor to sap surface (cm).
+func calculateFillPercentage(height, topDiameter, bottomDiameter, sensorDistance float64) float64 {
+	if height <= 0 || topDiameter <= 0 || bottomDiameter <= 0 {
+		return 0
+	}
+
+	sapHeight := height - sensorDistance
+	if sapHeight <= 0 {
+		return 0
+	}
+	if sapHeight > height {
+		sapHeight = height
+	}
+
+	Rb := bottomDiameter / 2.0
+	Rt := topDiameter / 2.0
+
+	// Total volume of the frustum
+	totalVolume := (math.Pi * height / 3.0) * (Rb*Rb + Rb*Rt + Rt*Rt)
+
+	// Radius at the sap level (interpolated)
+	Rsap := Rb + (Rt-Rb)*(sapHeight/height)
+
+	// Volume of sap (frustum from bottom to sapHeight)
+	sapVolume := (math.Pi * sapHeight / 3.0) * (Rb*Rb + Rb*Rsap + Rsap*Rsap)
+
+	fillPct := (sapVolume / totalVolume) * 100.0
+
+	// Clamp to 0-100
+	if fillPct < 0 {
+		fillPct = 0
+	}
+	if fillPct > 100 {
+		fillPct = 100
+	}
+
+	return math.Round(fillPct*100) / 100 // round to 2 decimal places
+}
+
+// readingResponse wraps a reading with optional fill_percentage
+type readingResponse struct {
+	hardware_models.Reading
+	FillPercentage *float64 `json:"fill_percentage,omitempty"`
+}
+
+// enrichReadingsWithFillPercentage adds fill percentage to readings if device dimensions are set
+func (c *ReadingController) enrichReadingsWithFillPercentage(ctx *gin.Context, readings []hardware_models.Reading) []readingResponse {
+	result := make([]readingResponse, len(readings))
+
+	// Cache device lookups by pi_id+device_id
+	deviceCache := make(map[string]*hardware_models.Device)
+
+	for i, r := range readings {
+		result[i] = readingResponse{Reading: r}
+
+		key := r.PiID + ":" + r.DeviceID
+		device, ok := deviceCache[key]
+		if !ok {
+			d, err := c.deviceRepo.GetDevice(ctx, r.PiID, r.DeviceID)
+			if err != nil {
+				deviceCache[key] = nil
+				continue
+			}
+			device = d
+			deviceCache[key] = device
+		}
+
+		if device == nil {
+			continue
+		}
+
+		// Check if dimensions are set and level sensor data exists
+		if device.Height > 0 && device.TopDiameter > 0 && device.BottomDiameter > 0 &&
+			r.Payload.Sensors.Level != nil {
+			fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, r.Payload.Sensors.Level.Value)
+			result[i].FillPercentage = &fillPct
+		}
+	}
+
+	return result
 }
 
 func (c *ReadingController) GetLatestReadings(ctx *gin.Context) {
@@ -68,7 +156,8 @@ func (c *ReadingController) GetLatestReadings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"items": readings})
+	enriched := c.enrichReadingsWithFillPercentage(ctx, readings)
+	ctx.JSON(http.StatusOK, gin.H{"items": enriched})
 }
 
 func (c *ReadingController) GetReadings(ctx *gin.Context) {
@@ -124,17 +213,17 @@ func (c *ReadingController) GetReadings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, result)
+	enriched := c.enrichReadingsWithFillPercentage(ctx, result.Items)
+	ctx.JSON(http.StatusOK, gin.H{
+		"items":           enriched,
+		"next_page_token": result.NextPageToken,
+		"total":           result.Total,
+	})
 }
 
 func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 	piID := ctx.Param("pi_id")
-	deviceIDStr := ctx.Param("device_id")
-	deviceID, err := strconv.Atoi(deviceIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid device_id"})
-		return
-	}
+	deviceID := ctx.Param("device_id")
 
 	// Check if user has access to this PI
 	userRole, _ := middleware.GetRoleFromGinContext(ctx)
@@ -158,7 +247,7 @@ func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 
 	params := interfaces.ReadingQueryParams{
 		PiID:     piID,
-		DeviceID: deviceIDStr,
+		DeviceID: deviceID,
 		Limit:    limit,
 		Page:     page,
 	}
@@ -181,5 +270,10 @@ func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, result)
+	enriched := c.enrichReadingsWithFillPercentage(ctx, result.Items)
+	ctx.JSON(http.StatusOK, gin.H{
+		"items":           enriched,
+		"next_page_token": result.NextPageToken,
+		"total":           result.Total,
+	})
 }

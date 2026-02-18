@@ -18,7 +18,9 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# Use TARGETARCH for multi-arch support (amd64, arm64)
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /bin/ingestor \
