@@ -71,14 +71,13 @@ echo -e "${GREEN}Pushing API Service...${NC}"
 docker push "${API_IMAGE}"
 docker push "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-api:latest"
 
-# Build and push Email Service
-echo -e "\n${GREEN}[5/6] Building MQT Email Service...${NC}"
+# Build and push Email Service (multi-arch: amd64 + arm64 for Raspberry Pi)
+echo -e "\n${GREEN}[5/6] Building MQT Email Service (linux/amd64 + linux/arm64)...${NC}"
 EMAIL_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:${VERSION}"
-docker build -t "${EMAIL_IMAGE}" -f ./src/production/MQT.EmailService/Dockerfile .
-docker tag "${EMAIL_IMAGE}" "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:latest"
-echo -e "${GREEN}Pushing MQT Email Service...${NC}"
-docker push "${EMAIL_IMAGE}"
-docker push "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:latest"
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t "${EMAIL_IMAGE}" -t "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:latest" \
+  --push -f ./src/production/MQT.EmailService/Dockerfile .
+echo -e "${GREEN}Pushed MQT Email Service (multi-arch).${NC}"
 
 # Build and push Frontend (production URLs baked in for RPi/production use)
 echo -e "\n${GREEN}[6/6] Building Frontend...${NC}"
