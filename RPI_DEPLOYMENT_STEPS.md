@@ -53,6 +53,9 @@ docker compose version
 # Clone the repo (you need the compose files, nginx configs, scripts)
 git clone <your-repo-url>
 cd mptt.server
+
+# IMPORTANT: Remove override if present (it's for local testing only; having it excludes mqt-email-service)
+rm -f docker-compose.rpi.override.yml
 ```
 
 **Why clone?** You need:
@@ -353,6 +356,16 @@ docker exec nginx-proxy nginx -t
 
 # Restart nginx
 docker compose -f docker-compose.rpi.yml restart nginx
+```
+
+### mqt-email-service Not in Config / "no such service"
+
+If `docker compose -f docker-compose.rpi.yml config --services` does not list `mqt-email-service`, you likely have `docker-compose.rpi.override.yml` in the directory. That override is for **local testing only** and causes the email service to be excluded.
+
+**Fix:** Remove the override for production:
+```bash
+rm -f docker-compose.rpi.override.yml
+docker compose -f docker-compose.rpi.yml config --services   # should now include mqt-email-service
 ```
 
 ### Images Not Pulling
