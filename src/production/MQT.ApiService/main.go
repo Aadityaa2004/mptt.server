@@ -87,7 +87,7 @@ func main() {
 
 	// Initialize auth services
 	authServiceInstance := authService.NewAuthService(userRepo, roleRepo, jwtService, rbacService, verificationService)
-	userServiceInstance := authService.NewUserService(userRepo)
+	userServiceInstance := authService.NewUserService(userRepo, piRepo)
 
 	// Initialize role initializer
 	roleInitializer := authService.NewRoleInitializerService(
@@ -129,7 +129,7 @@ func main() {
 	router.Use(cors.New(corsConfig))
 
 	// Create controllers and register routes
-	authController := controllers.NewAuthController(authServiceInstance, config.OpenWeatherAPIKey)
+	authController := controllers.NewAuthController(authServiceInstance, config.OpenWeatherAPIKey, config.TurnstileSecretKey)
 	userController := controllers.NewUserController(userServiceInstance)
 	locationController := controllers.NewLocationController(authServiceInstance, deviceRepo)
 	piController := controllers.NewPiController(piRepo, userRepo, logger, authMiddlewareInstance)

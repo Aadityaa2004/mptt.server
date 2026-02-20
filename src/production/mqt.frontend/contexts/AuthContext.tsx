@@ -10,8 +10,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  login: (username: string, password: string, turnstileToken?: string) => Promise<void>;
+  register: (username: string, email: string, password: string, turnstileToken?: string) => Promise<void>;
   verifyEmail: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => void;
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, handleLogout]);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string, turnstileToken?: string) => {
     try {
       // Clear any existing tokens and interval before logging in
       if (refreshIntervalRef.current) {
@@ -108,7 +108,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       clearTokens();
       
-      const response: AuthResponse = await authService.login({ username, password });
+      const response: AuthResponse = await authService.login({
+        username,
+        password,
+        ...(turnstileToken && { turnstile_token: turnstileToken }),
+      });
       
       setUser({
         user_id: response.user_id,
@@ -119,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Navigate based on role
       if (response.role === "admin") {
-        router.push("/admin/dashboard");
+        router.push("/admin/overview");
       } else {
         router.push("/user/dashboard");
       }
@@ -128,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  const register = useCallback(async (username: string, email: string, password: string) => {
+  const register = useCallback(async (username: string, email: string, password: string, turnstileToken?: string) => {
     try {
       // Clear any existing tokens and interval before registering
       if (refreshIntervalRef.current) {
@@ -141,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username,
         email,
         password,
+        ...(turnstileToken && { turnstile_token: turnstileToken }),
       });
 
       // Registration requires email verification - redirect to verify-email

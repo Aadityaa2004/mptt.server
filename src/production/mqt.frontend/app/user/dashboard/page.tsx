@@ -17,7 +17,7 @@ const DeviceMap = dynamic(
         return {
           default: function DeviceMapFallback() {
             return (
-              <div className="w-full h-[600px] rounded-lg border border-white/10 flex items-center justify-center bg-black/50">
+              <div className="w-full h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
                 <div className="text-white/60 font-light">Failed to load map. Please refresh the page.</div>
               </div>
             );
@@ -27,7 +27,7 @@ const DeviceMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[600px] rounded-lg border border-white/10 flex items-center justify-center bg-black/50">
+      <div className="w-full h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
         <div className="text-white/60 font-light">Loading map...</div>
       </div>
     ),
@@ -289,7 +289,7 @@ export default function UserDashboardPage() {
 
   if (isLoading || isCheckingLocation) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
           <p className="text-white/60 font-light">Loading...</p>
@@ -303,71 +303,70 @@ export default function UserDashboardPage() {
     : [40.7580, -74.0390]; // Default to Weehawken, NJ
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-light tracking-tight mb-2">
+      <main className="pt-20">
+        <div className="max-w-[1600px] mx-auto">
+          {/* Header - minimal */}
+          <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
+            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground">
               Dashboard
             </h1>
-            {/* <p className="text-white/60 font-light text-sm">
-              Welcome back, {user?.username}
-            </p> */}
           </div>
 
           {error && (
-            <div className="mb-6 p-4 border border-red-500/20 bg-red-500/10 rounded-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-400" />
+            <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-red-500/5 border border-red-500/20 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
               <p className="text-sm text-red-400 font-light">{error}</p>
             </div>
           )}
 
-          {/* Location Input Panel - Only show if location not set */}
+          {/* Location Input - Only show if location not set */}
           {showLocationInput && !hasLocation && (
-            <div className="border border-white/10 rounded-lg p-8 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm mb-6">
-              <h2 className="text-2xl font-light mb-4">Welcome! Set Your Location</h2>
-              <p className="text-orange-400/80 font-light text-sm mb-6">
-                To get started, please set your location to view weather information and manage your sensors.
-              </p>
-              <LocationInput
-                onLocationSubmit={handleLocationSubmit}
-                isLoading={isUpdatingLocation}
-              />
-            </div>
+            <section className="px-4 sm:px-6 lg:px-8 py-8">
+              <div className="max-w-2xl">
+                <h2 className="text-xl font-light mb-2">Set your location</h2>
+                <p className="text-white/50 font-light text-sm mb-6">
+                  Add your location to view weather and manage sensors.
+                </p>
+                <LocationInput
+                  onLocationSubmit={handleLocationSubmit}
+                  isLoading={isUpdatingLocation}
+                />
+              </div>
+            </section>
           )}
 
-          {/* Weather Panel */}
+          {/* Weather - compact strip when location is set */}
           {hasLocation && (
-            <div className="mb-6 border border-white/10 rounded-lg bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm overflow-hidden">
-              <div className="px-4 pb-4 pt-4">
-                {isLoadingWeather ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
-                      <p className="text-white/60 font-light text-sm">Loading weather data...</p>
-                    </div>
-                  </div>
-                ) : currentWeather ? (
-                  <CurrentWeather weather={currentWeather} />
-                ) : (
-                  <p className="text-white/60 font-light text-center py-6 text-sm">
-                    No weather data available
-                  </p>
-                )}
+            <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-white/5">
+              {isLoadingWeather ? (
+                <div className="flex items-center gap-3 py-4">
+                  <Loader2 className="h-5 w-5 text-white/40 animate-spin" />
+                  <p className="text-white/50 font-light text-sm">Loading weather...</p>
+                </div>
+              ) : currentWeather ? (
+                <CurrentWeather weather={currentWeather} />
+              ) : (
+                <p className="text-white/50 font-light text-sm py-4">No weather data</p>
+              )}
+            </section>
+          )}
+
+          {/* Map - full-bleed hero section */}
+          <section className="relative">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-light text-foreground">Sensor Map</h2>
+                <p className="text-white/50 font-light text-sm mt-0.5">
+                  Add devices on the map or click markers for details
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Interactive Map */}
-          <div className="mb-6 border border-white/10 rounded-lg p-6 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm">
-            <h2 className="text-xl font-light mb-4">Sensor Map</h2>
-            <p className="text-white/60 font-light text-sm mb-4">
-              Click &quot;Add Device&quot; to place sensors on the map. Click on markers to view device information.
-            </p>
+            <div className="px-4 sm:px-6 lg:px-8 pb-8 -mt-2">
             <ErrorBoundary
               fallback={
-                <div className="w-full h-[600px] rounded-lg border border-red-500/20 bg-red-500/10 flex items-center justify-center">
+                <div className="w-full h-[600px] rounded-2xl border border-red-500/20 bg-red-500/5 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-red-400 font-light mb-2">Failed to load map</p>
                     <button
@@ -411,10 +410,10 @@ export default function UserDashboardPage() {
                 }
               />
             </ErrorBoundary>
-          </div>
+            </div>
+          </section>
         </div>
       </main>
-
     </div>
   );
 }

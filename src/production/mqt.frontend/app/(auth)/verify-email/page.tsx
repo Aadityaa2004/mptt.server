@@ -70,7 +70,7 @@ function VerifyEmailContent() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <p className="text-white/60 font-light">Loading...</p>
       </div>
     );
@@ -82,7 +82,7 @@ function VerifyEmailContent() {
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
         <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
           <div className="text-center">
@@ -100,7 +100,7 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
         <div className="w-full max-w-md">
@@ -185,7 +185,7 @@ export default function VerifyEmailPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
           <p className="text-white/60 font-light">Loading...</p>
         </div>
       }

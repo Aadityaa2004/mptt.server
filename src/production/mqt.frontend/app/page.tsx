@@ -8,7 +8,7 @@ import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <Navbar />
 
       {/* Main Content */}

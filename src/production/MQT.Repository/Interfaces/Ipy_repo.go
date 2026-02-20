@@ -19,4 +19,7 @@ type PiRepository interface {
 
 	// Delete pi
 	DeletePi(ctx context.Context, piID string, cascade bool) error
+
+	// UnassignPisByUserID sets user_id to empty for all PIs assigned to the given user
+	UnassignPisByUserID(ctx context.Context, userID string) (int64, error)
 }

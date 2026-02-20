@@ -275,8 +275,8 @@ services:
     networks:
       - mqtt-network
     healthcheck:
-      # /health isn't defined in nginx config; use / which should return 200
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      # Use /health/live (proxied to api-service) - fast, no frontend/Next.js dependency
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3

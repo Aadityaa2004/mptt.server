@@ -29,6 +29,8 @@ export default function SensorAnalyticsPage() {
   const [copied, setCopied] = useState(false);
   const [timeRange, setTimeRange] = useState<"1h" | "1d" | "1w" | "1m" | "1y">("1d");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [collectionEnabled, setCollectionEnabled] = useState<boolean | null>(null);
+  const [isTogglingCollection, setIsTogglingCollection] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user && deviceId) {
@@ -56,6 +58,7 @@ export default function SensorAnalyticsPage() {
     if (piId && deviceId) {
       loadLatestReading();
       loadReadingsForStats();
+      sensorService.getDevice(piId, deviceId).then((d) => setCollectionEnabled(d.collection_enabled !== false)).catch(() => setCollectionEnabled(null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piId, deviceId]);
@@ -230,10 +233,23 @@ export default function SensorAnalyticsPage() {
     }
   };
 
+  const handleToggleCollection = async () => {
+    if (!piId || !deviceId || collectionEnabled === null || isTogglingCollection) return;
+    try {
+      setIsTogglingCollection(true);
+      setError(null);
+      await sensorService.updateDevice(piId, deviceId, { collection_enabled: !collectionEnabled });
+      setCollectionEnabled(!collectionEnabled);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update collection");
+    } finally {
+      setIsTogglingCollection(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
           <p className="text-white/60 font-light">Loading...</p>
@@ -243,7 +259,7 @@ export default function SensorAnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-7xl mx-auto">
@@ -278,16 +294,18 @@ export default function SensorAnalyticsPage() {
                 )}
               </Button>
             </div>
-            {/* {piId ? (
-              <p className="text-white/60 font-light text-sm">
-                PI ID: {piId}
-              </p>
-            ) : isFindingPi ? (
-              <div className="flex items-center gap-2 mt-2">
-                <Loader2 className="h-4 w-4 text-white/60 animate-spin" />
-                <p className="text-white/60 font-light text-sm">Finding device...</p>
+            {piId && collectionEnabled !== null && (
+              <div className="flex items-center gap-3 mt-3">
+                <span className="text-white/60 font-light text-sm">Data collection:</span>
+                <button
+                  onClick={handleToggleCollection}
+                  disabled={isTogglingCollection}
+                  className={`px-3 py-1.5 rounded text-sm font-light transition-colors ${collectionEnabled ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/60"}`}
+                >
+                  {isTogglingCollection ? "Updating..." : collectionEnabled ? "On" : "Off"}
+                </button>
               </div>
-            ) : null} */}
+            )}
           </div>
 
           {error && (

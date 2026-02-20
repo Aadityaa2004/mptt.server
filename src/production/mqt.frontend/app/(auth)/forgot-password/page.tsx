@@ -5,10 +5,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/navbar/Navbar";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { authService } from "@/services/api/authService";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -18,7 +20,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setIsLoading(true);
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(email, turnstileToken ?? undefined);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed. Please try again.");
@@ -29,7 +31,7 @@ export default function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
         <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
           <div className="w-full max-w-md text-center space-y-6">
@@ -54,7 +56,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
         <div className="w-full max-w-md">
@@ -89,6 +91,11 @@ export default function ForgotPasswordPage() {
                 className="bg-transparent border-white/20 text-white placeholder:text-white/40 focus:border-white/40 rounded-lg h-11"
               />
             </div>
+
+            <TurnstileWidget
+              onVerify={(token) => setTurnstileToken(token)}
+              onExpire={() => setTurnstileToken(null)}
+            />
 
             <Button
               type="submit"

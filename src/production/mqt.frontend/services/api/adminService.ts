@@ -13,6 +13,7 @@ import type {
   UpdateUserRequest,
   UpdateUserRoleRequest,
   RegisterAdminRequest,
+  RegisterAdminResponse,
   GetReadingsParams,
   GetDeviceReadingsParams,
   GetStatsParams,
@@ -74,7 +75,7 @@ export const adminService = {
     return response.json();
   },
 
-  async registerAdmin(userData: RegisterAdminRequest): Promise<User> {
+  async registerAdmin(userData: RegisterAdminRequest): Promise<RegisterAdminResponse> {
     const response = await apiFetch("/api/auth/register/admin", {
       method: "POST",
       body: JSON.stringify(userData),
@@ -208,6 +209,7 @@ export const adminService = {
     if (updates.height !== undefined) requestBody.height = updates.height;
     if (updates.top_diameter !== undefined) requestBody.top_diameter = updates.top_diameter;
     if (updates.bottom_diameter !== undefined) requestBody.bottom_diameter = updates.bottom_diameter;
+    if (updates.collection_enabled !== undefined) requestBody.collection_enabled = updates.collection_enabled;
     // URL encode deviceId to handle MAC addresses with colons
     const encodedDeviceId = encodeURIComponent(String(deviceId));
     const response = await apiFetch(`/pis/${piId}/devices/${encodedDeviceId}`, {
@@ -217,6 +219,24 @@ export const adminService = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: "Failed to update device" }));
       throw new Error(error.error || "Failed to update device");
+    }
+    return response.json();
+  },
+
+  async deleteReadingsByDateRange(
+    piId: string,
+    deviceId: number | string,
+    from: string,
+    to: string
+  ): Promise<{ deleted: boolean }> {
+    const encodedDeviceId = encodeURIComponent(String(deviceId));
+    const params = new URLSearchParams({ from, to });
+    const response = await apiFetch(`/readings/pis/${piId}/devices/${encodedDeviceId}?${params}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Failed to delete readings" }));
+      throw new Error(error.error || "Failed to delete readings");
     }
     return response.json();
   },

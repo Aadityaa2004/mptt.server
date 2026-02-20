@@ -24,74 +24,44 @@ export function CurrentWeather({ weather }: CurrentWeatherProps) {
   };
 
   return (
-    <div className="border border-white/10 rounded-lg p-4 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm select-none">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-xl font-light mb-0.5">{weather.name}</h2>
-          <p className="text-white/60 text-xs font-light capitalize">
-            {mainCondition.description}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="select-none">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+        <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={iconUrl} alt={mainCondition.main} className="w-12 h-12" />
-          <div className="text-right">
-            <div className="text-3xl font-light">{Math.round(celsiusToFahrenheit(weather.main.temp))}°F</div>
-            <div className="text-xs text-white/60 font-light">
-              Feels like {Math.round(celsiusToFahrenheit(weather.main.feels_like))}°F
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-        <div className="flex items-center gap-2">
-          <Gauge className="h-3.5 w-3.5 text-white/40" />
+          <img src={iconUrl} alt={mainCondition.main} className="w-11 h-11" />
           <div>
-            <div className="text-xs text-white/60 font-light">Pressure</div>
-            <div className="text-xs font-light">{weather.main.pressure} hPa</div>
+            <div className="text-2xl font-light">{Math.round(celsiusToFahrenheit(weather.main.temp))}°F</div>
+            <p className="text-white/50 text-sm font-light capitalize">{weather.name} · {mainCondition.description}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Droplets className="h-3.5 w-3.5 text-white/40" />
-          <div>
-            <div className="text-xs text-white/60 font-light">Humidity</div>
-            <div className="text-xs font-light">{weather.main.humidity}%</div>
+        <div className="h-6 w-px bg-white/10 hidden sm:block" />
+        <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <Droplets className="h-4 w-4 text-white/40" />
+            <span className="text-white/70 font-light">{weather.main.humidity}%</span>
+            <span className="text-white/40 font-light text-xs">humidity</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Wind className="h-4 w-4 text-white/40" />
+            <span className="text-white/70 font-light">{weather.wind.speed} m/s</span>
+            <span className="text-white/40 font-light text-xs">wind</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-white/40" />
+            <span className="text-white/70 font-light">{weather.main.pressure} hPa</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-white/40" />
+            <span className="text-white/70 font-light">{(weather.visibility / 1000).toFixed(1)} km</span>
+            <span className="text-white/40 font-light text-xs">visibility</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Wind className="h-3.5 w-3.5 text-white/40" />
-          <div>
-            <div className="text-xs text-white/60 font-light">Wind</div>
-            <div className="text-xs font-light">{weather.wind.speed} m/s</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Eye className="h-3.5 w-3.5 text-white/40" />
-          <div>
-            <div className="text-xs text-white/60 font-light">Visibility</div>
-            <div className="text-xs font-light">{(weather.visibility / 1000).toFixed(1)} km</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
-        <div>
-          <div className="text-xs text-white/60 font-light mb-0.5">Sunrise</div>
-          <div className="text-xs font-light">{formatTime(weather.sys.sunrise)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-white/60 font-light mb-0.5">Sunset</div>
-          <div className="text-xs font-light">{formatTime(weather.sys.sunset)}</div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-4 text-xs text-white/60 font-light">
-        <div>
-          High: <span className="text-white">{Math.round(celsiusToFahrenheit(weather.main.temp_max))}°F</span>
-        </div>
-        <div>
-          Low: <span className="text-white">{Math.round(celsiusToFahrenheit(weather.main.temp_min))}°F</span>
+        <div className="h-6 w-px bg-white/10 hidden md:block" />
+        <div className="flex items-center gap-6 text-sm text-white/50 font-light">
+          <span>H: {Math.round(celsiusToFahrenheit(weather.main.temp_max))}°</span>
+          <span>L: {Math.round(celsiusToFahrenheit(weather.main.temp_min))}°</span>
+          <span>Sunrise {formatTime(weather.sys.sunrise)}</span>
+          <span>Sunset {formatTime(weather.sys.sunset)}</span>
         </div>
       </div>
     </div>

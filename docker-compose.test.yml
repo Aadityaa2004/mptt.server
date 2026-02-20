@@ -1,0 +1,54 @@
+# Test stack: Postgres + API service for integration tests.
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   export TEST_API_URL=http://localhost:9002
+#   go test -tags=integration ./src/test/integration/...
+#   docker compose -f docker-compose.test.yml down
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-test
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: iot_user
+      POSTGRES_PASSWORD: iot_password
+      POSTGRES_DB: iot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iot_user -d iot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-service:
+    build:
+      context: .
+      dockerfile: ./src/production/MQT.ApiService/Dockerfile
+    container_name: api-service-test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9002:9002"
+    environment:
+      PORT: "9002"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: iot_user
+      POSTGRES_PASSWORD: iot_password
+      POSTGRES_DB: iot
+      POSTGRES_SSLMODE: disable
+      INTERNAL_API_SECRET: test-internal-secret
+      JWT_SECRET_KEY: test-jwt-secret-at-least-32-characters-long
+      JWT_ISSUER: mpt-api-service-test
+      JWT_ACCESS_TOKEN_DURATION: 24h
+      JWT_REFRESH_TOKEN_DURATION: 168h
+      ADMIN_USERNAME: admin
+      ADMIN_EMAIL: admin@test.example
+      ADMIN_PASSWORD: adminpassword123
+      CORS_ALLOWED_ORIGINS: "*"
+      EMAIL_SERVICE_URL: http://localhost:9004
+      FRONTEND_BASE_URL: http://localhost:3000
+      TZ: Etc/UTC
+    # No healthcheck: distroless image has no shell. Wait ~15s after postgres is healthy before running integration tests.

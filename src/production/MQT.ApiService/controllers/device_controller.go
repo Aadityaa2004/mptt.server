@@ -34,9 +34,9 @@ func NewDeviceController(deviceRepo interfaces.DeviceRepository, piRepo interfac
 func (c *DeviceController) RegisterRoutes(router *gin.Engine) {
 	devices := router.Group("/pis/:pi_id/devices")
 	{
-		// Admin only - create/update/delete
+		// Admin only - create/delete; PATCH allowed for admin or PI owner
 		devices.POST("", c.authMiddleware.Authenticate(), c.authMiddleware.RequireAdmin(), c.CreateDevice)
-		devices.PATCH("/:device_id", c.authMiddleware.Authenticate(), c.authMiddleware.RequireAdmin(), c.UpdateDevice)
+		devices.PATCH("/:device_id", c.authMiddleware.Authenticate(), c.UpdateDevice)
 		devices.DELETE("/:device_id", c.authMiddleware.Authenticate(), c.authMiddleware.RequireAdmin(), c.DeleteDevice)
 
 		// Admin: all devices, User: devices from their PIs
@@ -62,11 +62,12 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 	}
 
 	device := hardware_models.Device{
-		PiID:           piID,
-		DeviceID:       req.DeviceID,
-		Height:         req.Height,
-		TopDiameter:    req.TopDiameter,
-		BottomDiameter: req.BottomDiameter,
+		PiID:              piID,
+		DeviceID:          req.DeviceID,
+		Height:            req.Height,
+		TopDiameter:       req.TopDiameter,
+		BottomDiameter:    req.BottomDiameter,
+		CollectionEnabled: true, // new devices default to collection on
 	}
 
 	if err := c.deviceRepo.CreateOrUpdateDevice(ctx, device); err != nil {
@@ -139,9 +140,10 @@ func (c *DeviceController) GetDevice(ctx *gin.Context) {
 }
 
 type UpdateDeviceRequest struct {
-	Height         *float64 `json:"height,omitempty"`
-	TopDiameter    *float64 `json:"top_diameter,omitempty"`
-	BottomDiameter *float64 `json:"bottom_diameter,omitempty"`
+	Height            *float64 `json:"height,omitempty"`
+	TopDiameter       *float64 `json:"top_diameter,omitempty"`
+	BottomDiameter    *float64 `json:"bottom_diameter,omitempty"`
+	CollectionEnabled *bool    `json:"collection_enabled,omitempty"`
 }
 
 func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
@@ -165,6 +167,21 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 		return
 	}
 
+	// Allow admin or PI owner
+	userRole, _ := middleware.GetRoleFromGinContext(ctx)
+	if userRole != "admin" {
+		currentUserID, _ := middleware.GetUserFromGinContext(ctx)
+		pi, err := c.piRepo.GetPi(ctx, piID)
+		if err != nil {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "pi not found"})
+			return
+		}
+		if pi.UserID != currentUserID {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+	}
+
 	// Update fields if provided
 	if req.Height != nil {
 		existingDevice.Height = *req.Height
@@ -174,6 +191,9 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 	}
 	if req.BottomDiameter != nil {
 		existingDevice.BottomDiameter = *req.BottomDiameter
+	}
+	if req.CollectionEnabled != nil {
+		existingDevice.CollectionEnabled = *req.CollectionEnabled
 	}
 
 	if err := c.deviceRepo.UpdateDevice(ctx, *existingDevice); err != nil {

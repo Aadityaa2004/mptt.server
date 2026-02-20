@@ -1,0 +1,23 @@
+# Alert rules for MPTT stack.
+# Prometheus evaluates these; fire alerts to Alertmanager (if configured) or use for Grafana.
+
+groups:
+  - name: mptt-health
+    rules:
+      - alert: ApiServiceDown
+        expr: up{job="api-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API service is down"
+          description: "API service has been unreachable for more than 1 minute."
+
+      - alert: MqttIngestorDown
+        expr: up{job="mqtt-ingestor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MQTT Ingestor is down"
+          description: "MQTT Ingestor has been unreachable for more than 1 minute."

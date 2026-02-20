@@ -22,7 +22,7 @@ export default function MapLandingPage() {
   }, [isAuthenticated, isLoading, user, router]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">

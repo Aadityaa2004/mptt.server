@@ -148,6 +148,16 @@ func (c *InternalController) CreateReading(ctx *gin.Context) {
 		return
 	}
 
+	// Check if device has collection enabled; if not, accept but do not store
+	device, err := c.deviceRepo.GetDevice(ctx, req.PiID, req.DeviceID)
+	if err == nil && device != nil && !device.CollectionEnabled {
+		ctx.JSON(http.StatusOK, CreateReadingResponse{
+			Success: true,
+			Error:   "",
+		})
+		return
+	}
+
 	// Create reading
 	reading := hardware_models.Reading{
 		PiID:     req.PiID,

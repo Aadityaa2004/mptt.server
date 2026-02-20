@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev-prod_ready]
+  pull_request:
+    branches: [main, dev-prod_ready]
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify modules
+        run: go mod verify
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Run unit tests
+        run: go test ./src/test/unit/... -count=1 -v
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          config: .golangci.yml
+
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+          cache-dependency-path: src/production/mqt.frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd src/production/mqt.frontend && npm ci
+
+      - name: Lint frontend
+        run: cd src/production/mqt.frontend && npm run lint
+
+      - name: Test frontend
+        run: cd src/production/mqt.frontend && npm run test
+
+      - name: npm audit
+        run: cd src/production/mqt.frontend && npm audit --audit-level=high || true
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: "."
+          exit-code: "0"
+        continue-on-error: true

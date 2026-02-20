@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	service "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.ApiService/implementation/auth"
@@ -15,22 +18,72 @@ import (
 
 // AuthController handles authentication requests
 type AuthController struct {
-	authService       *service.AuthService
-	openWeatherAPIKey string
+	authService         *service.AuthService
+	openWeatherAPIKey   string
+	turnstileSecretKey  string
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(authService *service.AuthService, openWeatherAPIKey string) *AuthController {
+func NewAuthController(authService *service.AuthService, openWeatherAPIKey string, turnstileSecretKey string) *AuthController {
 	return &AuthController{
-		authService:       authService,
-		openWeatherAPIKey: openWeatherAPIKey,
+		authService:        authService,
+		openWeatherAPIKey:  openWeatherAPIKey,
+		turnstileSecretKey: turnstileSecretKey,
 	}
+}
+
+// verifyTurnstile checks the token with Cloudflare's siteverify API.
+// When turnstileSecretKey is empty, verification is skipped (returns nil).
+func (h *AuthController) verifyTurnstile(token string) error {
+	if h.turnstileSecretKey == "" {
+		return nil
+	}
+	if token == "" {
+		return fmt.Errorf("Turnstile verification required but no token provided")
+	}
+	form := url.Values{}
+	form.Set("secret", h.turnstileSecretKey)
+	form.Set("response", token)
+	req, err := http.NewRequest("POST", "https://challenges.cloudflare.com/turnstile/v0/siteverify", bytes.NewBufferString(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Success bool     `json:"success"`
+		Errors  []string `json:"error-codes,omitempty"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return err
+	}
+	if !result.Success {
+		if len(result.Errors) > 0 {
+			return fmt.Errorf("Turnstile verification failed: %v", result.Errors)
+		}
+		return fmt.Errorf("Turnstile verification failed")
+	}
+	return nil
 }
 
 // Register handles user registration
 func (h *AuthController) Register(c *gin.Context) {
-	var req service.RegisterRequest
+	var req struct {
+		service.RegisterRequest
+		TurnstileToken string `json:"turnstile_token"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.verifyTurnstile(req.TurnstileToken); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -38,7 +91,7 @@ func (h *AuthController) Register(c *gin.Context) {
 	// Force user role for regular registration - no admin role allowed
 	req.Role = "user"
 
-	resp, err := h.authService.Register(c.Request.Context(), req)
+	resp, err := h.authService.Register(c.Request.Context(), req.RegisterRequest)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -61,8 +114,16 @@ func (h *AuthController) Register(c *gin.Context) {
 
 // RegisterAdmin handles admin user registration (also requires email verification)
 func (h *AuthController) RegisterAdmin(c *gin.Context) {
-	var req service.RegisterRequest
+	var req struct {
+		service.RegisterRequest
+		TurnstileToken string `json:"turnstile_token"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.verifyTurnstile(req.TurnstileToken); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -70,7 +131,7 @@ func (h *AuthController) RegisterAdmin(c *gin.Context) {
 	// Force admin role
 	req.Role = "admin"
 
-	resp, err := h.authService.Register(c.Request.Context(), req)
+	resp, err := h.authService.Register(c.Request.Context(), req.RegisterRequest)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -93,13 +154,21 @@ func (h *AuthController) RegisterAdmin(c *gin.Context) {
 
 // Login handles user login
 func (h *AuthController) Login(c *gin.Context) {
-	var req service.LoginRequest
+	var req struct {
+		service.LoginRequest
+		TurnstileToken string `json:"turnstile_token"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	response, tokenPair, err := h.authService.Login(c.Request.Context(), req)
+	if err := h.verifyTurnstile(req.TurnstileToken); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response, tokenPair, err := h.authService.Login(c.Request.Context(), req.LoginRequest)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -447,9 +516,15 @@ func (h *AuthController) ResendOTP(c *gin.Context) {
 // ForgotPassword initiates password reset flow
 func (h *AuthController) ForgotPassword(c *gin.Context) {
 	var req struct {
-		Email string `json:"email" binding:"required"`
+		Email           string `json:"email" binding:"required"`
+		TurnstileToken  string `json:"turnstile_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.verifyTurnstile(req.TurnstileToken); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

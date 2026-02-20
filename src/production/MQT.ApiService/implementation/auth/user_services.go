@@ -11,12 +11,14 @@ import (
 // UserService provides user management operations
 type UserService struct {
 	userRepo interfaces.UserRepository
+	piRepo   interfaces.PiRepository
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo interfaces.UserRepository) *UserService {
+func NewUserService(userRepo interfaces.UserRepository, piRepo interfaces.PiRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
+		piRepo:   piRepo,
 	}
 }
 
@@ -35,6 +37,11 @@ func (s *UserService) UpdateUserRole(ctx context.Context, userID string, newRole
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
+	}
+
+	// When switching user to admin, unassign all PIs from that user
+	if newRole == "admin" && user.Role != "admin" {
+		_, _ = s.piRepo.UnassignPisByUserID(ctx, userID)
 	}
 
 	user.Role = newRole

@@ -17,9 +17,12 @@ export function DeviceCard({ device }: DeviceCardProps) {
   const router = useRouter();
   const [latestReading, setLatestReading] = useState<Reading | null>(null);
   const [isLoadingReading, setIsLoadingReading] = useState(true);
+  const [collectionEnabled, setCollectionEnabled] = useState<boolean | null>(null);
+  const [isTogglingCollection, setIsTogglingCollection] = useState(false);
 
   useEffect(() => {
     loadLatestReading();
+    sensorService.getDevice(device.pi_id, device.device_id).then((d) => setCollectionEnabled(d.collection_enabled !== false)).catch(() => setCollectionEnabled(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [device.pi_id, device.device_id]);
 
@@ -37,8 +40,19 @@ export function DeviceCard({ device }: DeviceCardProps) {
   };
 
   const handleClick = () => {
-    // Pass pi_id as query parameter to avoid having to look it up
     router.push(`/user/sensors/${device.device_id}?pi_id=${encodeURIComponent(device.pi_id)}`);
+  };
+
+  const handleToggleCollection = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (collectionEnabled === null || isTogglingCollection) return;
+    try {
+      setIsTogglingCollection(true);
+      await sensorService.updateDevice(device.pi_id, device.device_id, { collection_enabled: !collectionEnabled });
+      setCollectionEnabled(!collectionEnabled);
+    } finally {
+      setIsTogglingCollection(false);
+    }
   };
 
   return (
@@ -52,6 +66,19 @@ export function DeviceCard({ device }: DeviceCardProps) {
         <p className="text-white/60 font-light text-sm font-mono tracking-wider">
           {device.device_id}
         </p>
+        {collectionEnabled !== null && (
+          <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+            <span className="text-xs text-white/50 font-light">Collection:</span>
+            <button
+              type="button"
+              onClick={handleToggleCollection}
+              disabled={isTogglingCollection}
+              className={`px-2 py-0.5 rounded text-xs font-light ${collectionEnabled ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/60"}`}
+            >
+              {isTogglingCollection ? "..." : collectionEnabled ? "On" : "Off"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content Section - Flex grow to push chevron down */}

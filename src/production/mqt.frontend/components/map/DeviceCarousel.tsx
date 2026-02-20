@@ -104,131 +104,110 @@ export function DeviceCarousel({ devices, currentIndex, onClose, onNavigate, onD
   if (!currentDevice) return null;
 
   return (
-    <div className="max-w-md w-full">
-      <div className="relative border border-white/20 rounded-lg bg-black/40 backdrop-blur-lg shadow-xl">
-        {/* Close Button */}
+    <div className="w-full max-w-2xl rounded-t-2xl overflow-hidden bg-black/98 backdrop-blur-xl border border-white/10 border-b-0 shadow-[0_-8px_32px_rgba(0,0,0,0.5)]">
+      <div className="w-12 h-1 rounded-full bg-white/20 mx-auto mt-3 mb-1" />
+      <div className="flex items-center justify-between px-4 pb-2">
+        <div className="flex items-center gap-2">
+          {devices.length > 1 && (
+            <>
+              <Button
+                onClick={handlePrevious}
+                className="bg-white/5 hover:bg-orange-500/20 h-8 w-8 p-0 rounded-xl transition-all text-white/80 hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-white/50 font-light min-w-[3rem] text-center">
+                {currentIndex + 1} / {devices.length}
+              </span>
+              <Button
+                onClick={handleNext}
+                className="bg-white/5 hover:bg-orange-500/20 h-8 w-8 p-0 rounded-xl transition-all text-white/80 hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
         <Button
           onClick={onClose}
-          className="absolute top-2 right-2 z-10 bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 h-8 w-8 p-0 transition-all"
+          className="h-8 w-8 p-0 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all"
         >
           <X className="h-4 w-4" />
         </Button>
+      </div>
 
-        {/* Device Info */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <div className="mb-4">
-            <h2 className="text-xl font-light mb-1">Device</h2>
-            <p className="text-white/60 font-light text-xs font-mono tracking-wider mb-2">
-              {currentDevice.device_id}
-            </p>
-            <p className="text-xs text-white/40 font-light">Pi ID: {currentDevice.pi_id}</p>
-          </div>
-
-          {/* Latest Reading */}
-          {isLoadingReading ? (
-            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 text-white/40 animate-spin" />
-            </div>
-          ) : latestReading ? (
-            <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-              {/* Sensor Readings Grid - Similar to DeviceCard */}
-              <div className="grid grid-cols-3 gap-2">
-                {latestReading.payload.sensors.temperature && (
-                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-orange-500/60">
-                    <Thermometer className="h-3.5 w-3.5 text-white/60" />
-                    <span className="text-xs font-light text-white/90">
-                      {latestReading.payload.sensors.temperature.value.toFixed(1)}°
-                      {latestReading.payload.sensors.temperature.unit === "fahrenheit" || latestReading.payload.sensors.temperature.unit === "F" 
-                        ? "F" 
-                        : latestReading.payload.sensors.temperature.unit === "celsius" || latestReading.payload.sensors.temperature.unit === "C" 
-                        ? "C" 
-                        : latestReading.payload.sensors.temperature.unit?.toUpperCase() || ""}
-                    </span>
-                  </div>
-                )}
-                {latestReading.payload.sensors.level && (
-                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-orange-500/60">
-                    <Droplets className="h-3.5 w-3.5 text-white/60" />
-                    <span className="text-xs font-light text-white/90">
-                      {latestReading.payload.sensors.level.value.toFixed(1)}
-                    </span>
-                    <span className="text-[10px] font-light text-white/50">
-                      {latestReading.payload.sensors.level.unit}
-                    </span>
-                  </div>
-                )}
-                <div className="flex flex-col items-center gap-1 p-2 rounded bg-orange-500/60">
-                  <Battery className="h-3.5 w-3.5 text-white/60" />
-                  <span className="text-xs font-light text-white/90">
-                    {latestReading.payload.battery_percentage.toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-              
-              {/* Last Updated */}
-              <div className="pt-2 border-t border-white/5">
-                <p className="text-xs text-white/40 font-light">
-                  Last updated: {new Date(latestReading.ts).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/40 font-light text-center">
-                No readings available yet
-              </p>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="mt-4 pt-4 border-t border-white/10 flex gap-2">
-            <Button
-              onClick={handleRemoveFromMap}
-              disabled={isDeleting}
-              className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm font-light">Removing...</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="text-sm font-light">Remove from Map</span>
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleViewAnalytics}
-              className="flex-1 bg-gray-300 hover:bg-gray-300/90 border border-white/10 text-black transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="text-sm font-light">View Analytics</span>
-              <ChevronRightIcon className="h-4 w-4" />
-            </Button>
-          </div>
+      <div className="p-4 pt-0 max-h-[60vh] overflow-y-auto">
+        <div className="mb-4">
+          <p className="text-sm font-mono font-light text-white/90">{currentDevice.device_id}</p>
+          <p className="text-xs text-white/40 font-light mt-0.5">Pi: {currentDevice.pi_id}</p>
         </div>
 
-        {/* Navigation */}
-        {devices.length > 1 && (
-          <div className="flex items-center justify-between px-4 pb-4 pt-2 border-t border-white/10">
-            <Button
-              onClick={handlePrevious}
-              className="bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 h-8 w-8 p-0 rounded-full transition-all"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-xs text-white/60 font-light bg-white/5 px-3 py-1 rounded-full border border-white/10">
-              {currentIndex + 1} / {devices.length}
-            </div>
-            <Button
-              onClick={handleNext}
-              className="bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 h-8 w-8 p-0 rounded-full transition-all"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+        {isLoadingReading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 text-white/40 animate-spin" />
           </div>
+        ) : latestReading ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-2">
+              {latestReading.payload.sensors.temperature && (
+                <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5">
+                  <Thermometer className="h-4 w-4 text-orange-400/80" />
+                  <span className="text-sm font-light text-white/90">
+                    {latestReading.payload.sensors.temperature.value.toFixed(1)}°
+                    {latestReading.payload.sensors.temperature.unit === "fahrenheit" || latestReading.payload.sensors.temperature.unit === "F" 
+                      ? "F" 
+                      : latestReading.payload.sensors.temperature.unit === "celsius" || latestReading.payload.sensors.temperature.unit === "C" 
+                      ? "C" 
+                      : latestReading.payload.sensors.temperature.unit?.toUpperCase() || ""}
+                  </span>
+                </div>
+              )}
+              {latestReading.payload.sensors.level && (
+                <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5">
+                  <Droplets className="h-4 w-4 text-orange-400/80" />
+                  <span className="text-sm font-light text-white/90">
+                    {latestReading.payload.sensors.level.value.toFixed(1)}
+                  </span>
+                  <span className="text-[10px] font-light text-white/50">
+                    {latestReading.payload.sensors.level.unit}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5">
+                <Battery className="h-4 w-4 text-orange-400/80" />
+                <span className="text-sm font-light text-white/90">
+                  {latestReading.payload.battery_percentage.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-white/40 font-light">
+              Updated {new Date(latestReading.ts).toLocaleString()}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-white/40 font-light py-4">No readings yet</p>
         )}
+
+        <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+          <Button
+            onClick={handleViewAnalytics}
+            className="flex-1 h-11 rounded-xl bg-orange-500/90 hover:bg-orange-500 text-white font-light transition-all flex items-center justify-center gap-2"
+          >
+            <span className="text-sm font-light">View Analytics</span>
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={handleRemoveFromMap}
+            disabled={isDeleting}
+            className="h-11 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 text-white/80 hover:text-red-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed px-4"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

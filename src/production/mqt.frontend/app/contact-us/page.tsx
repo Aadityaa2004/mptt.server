@@ -5,7 +5,7 @@ import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
 
 export default function ContactUsPage() {
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <Navbar />
 
       <main className="relative z-20 px-4 sm:px-6 lg:px-8 pt-24 pb-20">

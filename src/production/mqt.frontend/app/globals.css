@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-:root {
+:root,
+.dark {
+  --font-geist-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, monospace;
   --background: #000000;
   --foreground: #ffffff;
   --card: #000000;
@@ -20,6 +23,29 @@
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.1);
   --ring: rgba(255, 255, 255, 0.2);
+  --radius: 0.5rem;
+}
+
+.light {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #ea580c;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: rgba(0, 0, 0, 0.2);
   --radius: 0.5rem;
 }
 
@@ -59,26 +85,32 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar - dark by default */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
   background: #000000;
 }
-
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+.light ::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+.light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
 
-/* MapLibre GL styles */
+/* MapLibre GL styles - dark theme */
 .maplibregl-popup-content {
   background: rgba(0, 0, 0, 0.95);
   color: #ffffff;
@@ -86,26 +118,22 @@ body {
   border-radius: 8px;
   padding: 8px 12px;
 }
-
 .maplibregl-popup-tip {
   border-top-color: rgba(0, 0, 0, 0.95);
 }
-
 .maplibregl-ctrl-group {
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
-
 .maplibregl-ctrl button {
   background-color: rgba(0, 0, 0, 0.8);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 .maplibregl-ctrl button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
-
 .maplibregl-ctrl-attrib {
   background: rgba(0, 0, 0, 0.8);
   color: rgba(255, 255, 255, 0.6);

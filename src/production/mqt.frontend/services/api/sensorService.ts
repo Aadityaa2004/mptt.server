@@ -141,6 +141,39 @@ const sensorService = {
   },
 
   /**
+   * Get a single device (for collection_enabled etc.). User can get devices for their own PIs.
+   */
+  async getDevice(piId: string, deviceId: string): Promise<{ device_id: string; pi_id: string; collection_enabled?: boolean }> {
+    const encodedDeviceId = encodeURIComponent(deviceId);
+    const response = await apiFetch(`/pis/${piId}/devices/${encodedDeviceId}`, { method: "GET" });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Failed to fetch device" }));
+      throw new Error((error as { error?: string }).error || "Failed to fetch device");
+    }
+    return response.json();
+  },
+
+  /**
+   * Update device (e.g. collection_enabled). User can update devices for their own PIs.
+   */
+  async updateDevice(
+    piId: string,
+    deviceId: string,
+    updates: { collection_enabled?: boolean; height?: number; top_diameter?: number; bottom_diameter?: number }
+  ): Promise<unknown> {
+    const encodedDeviceId = encodeURIComponent(deviceId);
+    const response = await apiFetch(`/pis/${piId}/devices/${encodedDeviceId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Failed to update device" }));
+      throw new Error((error as { error?: string }).error || "Failed to update device");
+    }
+    return response.json();
+  },
+
+  /**
    * Get latest readings for all devices on a PI
    */
   async getLatestReadings(piId: string): Promise<ReadingsResponse> {

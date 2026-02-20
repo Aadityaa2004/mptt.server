@@ -9,6 +9,7 @@ import { sensorService, type Pi } from "@/services/api/sensorService";
 import { usePiPreferences, colorToGradient } from "@/hooks/usePiPreferences";
 import { MarkerShapeComponent } from "@/components/map/MarkerShape";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 export default function SettingsPage() {
@@ -98,17 +99,17 @@ export default function SettingsPage() {
 
   if (isLoading || isCheckingLocation) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
-          <p className="text-white/60 font-light">Loading...</p>
+          <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+          <p className="text-muted-foreground font-light">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-4xl mx-auto">
@@ -116,7 +117,7 @@ export default function SettingsPage() {
             <h1 className="text-4xl font-light tracking-tight mb-2">
               Settings
             </h1>
-            <p className="text-white/60 font-light text-sm">
+            <p className="text-muted-foreground font-light text-sm">
               Manage your account settings and preferences
             </p>
           </div>
@@ -135,8 +136,17 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Theme */}
+          <div className="relative z-10 border border-border rounded-lg p-8 bg-card mb-6">
+            <h2 className="text-2xl font-light mb-2 text-foreground">Appearance</h2>
+            <p className="text-muted-foreground font-light text-sm mb-4">
+              Choose light or dark theme for the application.
+            </p>
+            <ThemeToggle />
+          </div>
+
           {/* Location Settings */}
-          <div className="relative z-10 border border-white/10 rounded-lg p-8 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm mb-6">
+          <div className="relative z-10 border border-border rounded-lg p-8 bg-card mb-6">
             <h2 className="text-2xl font-light mb-4">Location Settings</h2>
             <p className="text-white/60 font-light text-sm mb-6">
               {hasLocation
@@ -150,7 +160,7 @@ export default function SettingsPage() {
           </div>
 
           {/* PI Marker Settings */}
-          <div className="border border-white/10 rounded-lg p-8 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm">
+          <div className="border border-border rounded-lg p-8 bg-card">
             <h2 className="text-2xl font-light mb-4">Map Marker Settings</h2>
             <p className="text-white/60 font-light text-sm mb-6">
               Customize the colors of markers for each Raspberry Pi unit on the map. This helps you visually group and identify your devices.

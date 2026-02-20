@@ -44,7 +44,7 @@ export default function AboutUsPage() {
   ];
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <Navbar />
 
       {/* Main Content */}

@@ -61,6 +61,9 @@ type Config struct {
 
 	// FrontendBaseURL is used for constructing password reset links in emails
 	FrontendBaseURL string `json:"frontend_base_url"`
+
+	// TurnstileSecretKey is used for Cloudflare Turnstile bot protection (optional)
+	TurnstileSecretKey string `json:"turnstile_secret_key"`
 }
 
 // ServerConfig holds server-related configuration
@@ -298,7 +301,8 @@ func LoadApiConfig() (*Config, error) {
 			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
 			EmailServiceURL: getEnv("EMAIL_SERVICE_URL", "http://mqt-email-service:9004"),
 		},
-		FrontendBaseURL: getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
+		FrontendBaseURL:    getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
+		TurnstileSecretKey: getEnv("TURNSTILE_SECRET_KEY", ""),
 	}
 
 	// Validate configuration

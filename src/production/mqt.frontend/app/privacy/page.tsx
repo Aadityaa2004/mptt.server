@@ -4,7 +4,7 @@ import Navbar from "@/components/navbar/Navbar";
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       <main className="px-4 sm:px-6 lg:px-8 pt-24 pb-20">

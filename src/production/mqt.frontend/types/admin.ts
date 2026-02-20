@@ -1,5 +1,13 @@
 export type UserRole = "user" | "admin";
 
+export interface UserLocation {
+  device_id: string;
+  pi_id: string;
+  latitude: number;
+  longitude: number;
+  color?: string;
+}
+
 export interface User {
   user_id: string;
   username: string;
@@ -8,6 +16,7 @@ export interface User {
   active: boolean;
   created_at?: string;
   updated_at?: string;
+  locations?: UserLocation[];
 }
 
 export interface Pi {
@@ -23,6 +32,7 @@ export interface Device {
   height?: number;
   top_diameter?: number;
   bottom_diameter?: number;
+  collection_enabled?: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -87,6 +97,7 @@ export interface UpdateDeviceRequest {
   height?: number;
   top_diameter?: number;
   bottom_diameter?: number;
+  collection_enabled?: boolean;
 }
 
 export interface UpdateUserRequest {
@@ -104,6 +115,15 @@ export interface RegisterAdminRequest {
   email: string;
   password: string;
   role: UserRole;
+}
+
+export interface RegisterAdminResponse {
+  requires_verification?: boolean;
+  email?: string;
+  message?: string;
+  id?: string;
+  role?: UserRole;
+  username?: string;
 }
 
 export interface GetReadingsParams {

@@ -9,9 +9,16 @@ import { apiFetch, setTokens, clearTokens } from "./apiClient";
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    const body: Record<string, unknown> = {
+      username: credentials.username,
+      password: credentials.password,
+    };
+    if (credentials.turnstile_token) {
+      body.turnstile_token = credentials.turnstile_token;
+    }
     const response = await apiFetch(API_ENDPOINTS.AUTH.LOGIN, {
       method: "POST",
-      body: JSON.stringify(credentials),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -25,10 +32,15 @@ export const authService = {
   },
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    const payload = {
-      ...userData,
+    const payload: Record<string, unknown> = {
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
       role: "user" as const,
     };
+    if (userData.turnstile_token) {
+      payload.turnstile_token = userData.turnstile_token;
+    }
 
     const response = await apiFetch(API_ENDPOINTS.AUTH.REGISTER, {
       method: "POST",
@@ -71,10 +83,12 @@ export const authService = {
     }
   },
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(email: string, turnstileToken?: string): Promise<void> {
+    const body: Record<string, unknown> = { email };
+    if (turnstileToken) body.turnstile_token = turnstileToken;
     const response = await apiFetch(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

@@ -65,7 +65,7 @@ export default function SensorReadingsPage() {
 
   if (isLoading || !piId) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
           <p className="text-white/60 font-light">Loading sensor data...</p>
@@ -75,7 +75,7 @@ export default function SensorReadingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-7xl mx-auto">

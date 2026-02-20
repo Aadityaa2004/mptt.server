@@ -41,6 +41,8 @@ func (c *ReadingController) RegisterRoutes(router *gin.Engine) {
 		readings.GET("/latest", c.authMiddleware.Authenticate(), c.GetLatestReadings)
 		readings.GET("", c.authMiddleware.Authenticate(), c.GetReadings)
 		readings.GET("/pis/:pi_id/devices/:device_id", c.authMiddleware.Authenticate(), c.GetDeviceReadings)
+		// Admin only: delete readings in date range
+		readings.DELETE("/pis/:pi_id/devices/:device_id", c.authMiddleware.Authenticate(), c.authMiddleware.RequireAdmin(), c.DeleteDeviceReadingsByTimeRange)
 	}
 }
 
@@ -276,4 +278,39 @@ func (c *ReadingController) GetDeviceReadings(ctx *gin.Context) {
 		"next_page_token": result.NextPageToken,
 		"total":           result.Total,
 	})
+}
+
+// DeleteDeviceReadingsByTimeRange deletes readings for a device within a date range (admin only).
+func (c *ReadingController) DeleteDeviceReadingsByTimeRange(ctx *gin.Context) {
+	piID := ctx.Param("pi_id")
+	deviceID := ctx.Param("device_id")
+	fromStr := ctx.Query("from")
+	toStr := ctx.Query("to")
+
+	if fromStr == "" || toStr == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "query params 'from' and 'to' (RFC3339) are required"})
+		return
+	}
+
+	from, err := time.Parse(time.RFC3339, fromStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'from' format, use RFC3339"})
+		return
+	}
+	to, err := time.Parse(time.RFC3339, toStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'to' format, use RFC3339"})
+		return
+	}
+	if from.After(to) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "'from' must be before or equal to 'to'"})
+		return
+	}
+
+	if err := c.readingRepo.DeleteReadingsByTimeRange(ctx, piID, deviceID, from, to); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"deleted": true})
 }

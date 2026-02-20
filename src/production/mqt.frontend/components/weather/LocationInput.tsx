@@ -85,7 +85,7 @@ export function LocationInput({ onLocationSubmit, isLoading }: LocationInputProp
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full max-w-xl">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <div className="relative flex-1">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
@@ -94,7 +94,7 @@ export function LocationInput({ onLocationSubmit, isLoading }: LocationInputProp
             value={query}
             onChange={handleInputChange}
             placeholder="Search for a city or location..."
-            className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/20"
+            className="pl-10 h-11 rounded-xl bg-white/[0.06] border-white/10 text-white placeholder:text-white/40 focus-visible:ring-1 focus-visible:ring-orange-500/30 focus-visible:border-orange-500/30"
             disabled={isLoading}
           />
           {isSearching && (
@@ -104,7 +104,7 @@ export function LocationInput({ onLocationSubmit, isLoading }: LocationInputProp
         <Button
           type="submit"
           disabled={isLoading || !query.trim()}
-          className="bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-11 px-5 rounded-xl bg-orange-500/90 hover:bg-orange-500 text-white font-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
@@ -118,20 +118,20 @@ export function LocationInput({ onLocationSubmit, isLoading }: LocationInputProp
       </form>
 
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-2 bg-black/95 border border-white/10 rounded-lg shadow-lg backdrop-blur-md">
+        <div className="absolute z-50 w-full mt-2 rounded-xl overflow-hidden bg-black/95 border border-white/10 shadow-xl">
           {suggestions.map((suggestion, index) => (
             <button
               key={index}
               type="button"
               onClick={() => handleSuggestionClick(suggestion)}
-              className="w-full px-4 py-3 text-left hover:bg-orange-500/10 transition-colors border-b border-white/5 last:border-b-0"
+              className="w-full px-4 py-3 text-left hover:bg-white/5 active:bg-white/10 transition-colors flex items-center gap-3 border-b border-white/5 last:border-b-0 first:pt-3 last:pb-3"
             >
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-white/40 flex-shrink-0" />
-                <span className="text-sm text-white/90 font-light">
-                  {suggestion.display_name}
-                </span>
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-4 w-4 text-orange-400/80" />
               </div>
+              <span className="text-sm text-white/90 font-light truncate">
+                {suggestion.display_name}
+              </span>
             </button>
           ))}
         </div>

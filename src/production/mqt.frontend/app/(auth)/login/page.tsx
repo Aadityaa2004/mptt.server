@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/navbar/Navbar";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -20,7 +22,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
       if (user.role === "admin") {
-        router.push("/admin/dashboard");
+        router.push("/admin/overview");
       } else {
         router.push("/user/dashboard");
       }
@@ -33,7 +35,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(username, password);
+      await login(username, password, turnstileToken ?? undefined);
       // Navigation is handled in the auth context based on role
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed. Please check your credentials.";
@@ -46,7 +48,7 @@ export default function LoginPage() {
   // Show loading state while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <p className="text-white/60 font-light">Loading...</p>
       </div>
     );
@@ -58,7 +60,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
       <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
@@ -139,6 +141,11 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+
+            <TurnstileWidget
+              onVerify={(token) => setTurnstileToken(token)}
+              onExpire={() => setTurnstileToken(null)}
+            />
 
             <Button
               type="submit"

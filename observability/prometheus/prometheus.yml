@@ -1,0 +1,26 @@
+# Prometheus config for MPTT stack.
+# Scrapes /health (and optional /metrics) from API and Ingestor.
+# Run Prometheus with: docker run -v $(pwd)/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+# Or add Prometheus to docker-compose and use this file as config.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers: []
+  # Optional: point to Alertmanager
+  # - static_configs:
+  #     - targets: ["alertmanager:9093"]
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  # API service exposes /metrics (Prometheus text format)
+  - job_name: "api-service"
+    static_configs:
+      - targets: ["api-service:9002"]
+    metrics_path: /metrics
+
+  # MQTT Ingestor: add a scrape job when the service exposes /metrics. Until then, use blackbox_exporter to probe http://mqtt-ingestor:9003/health for availability.

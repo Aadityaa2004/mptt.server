@@ -3,6 +3,7 @@ export type UserRole = "user" | "admin";
 export interface LoginRequest {
   username: string;
   password: string;
+  turnstile_token?: string;
 }
 
 export interface RegisterRequest {
@@ -10,6 +11,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   role?: UserRole;
+  turnstile_token?: string;
 }
 
 export interface AuthResponse {

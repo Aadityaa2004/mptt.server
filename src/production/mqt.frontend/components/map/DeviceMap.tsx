@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTheme } from "next-themes";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -24,7 +25,12 @@ interface DeviceMapProps {
   carousel?: React.ReactNode;
 }
 
+const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
 export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.7128, -74.006], availablePis = [], availableDevices = [], selectedDeviceId = null, onCenterDevice, carousel }: DeviceMapProps) {
+  const { theme, resolvedTheme } = useTheme();
+  const mapStyle = resolvedTheme === "dark" || theme === "dark" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
   const { getPreference, initializePreferences, loadColorsFromBackend } = usePiPreferences();
   const [isAddingDevice, setIsAddingDevice] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -322,13 +328,13 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
   }
 
   return (
-    <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-white/10">
+    <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-white/10 bg-black/30">
       <Map
         ref={mapRef}
         {...viewState}
         onMove={(evt) => setViewState(evt.viewState)}
         onClick={handleMapClick}
-        mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+        mapStyle={mapStyle}
         style={{ width: "100%", height: "100%" }}
         cursor={isAddingDevice ? "crosshair" : "default"}
       >
@@ -404,7 +410,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
 
       {/* Map Centering Controls */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-        <div className="flex flex-col gap-2 bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg p-2">
+        <div className="flex flex-col gap-1.5 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2">
           <Button
             onClick={handleSetToCurrentLocation}
             className="bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 backdrop-blur-sm transition-all"
@@ -431,7 +437,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
           </Button>
         </div>
         {showCenterInput && (
-          <div className="bg-black/95 border border-white/10 rounded-lg p-4 backdrop-blur-md min-w-[280px]">
+          <div className="bg-black/95 border border-white/10 rounded-xl p-4 backdrop-blur-md min-w-[280px]">
             <h4 className="text-sm font-light mb-3 text-white">Set Map Center</h4>
             <div className="space-y-2">
               <div>
@@ -486,7 +492,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
         {!isAddingDevice ? (
           <Button
             onClick={() => setIsAddingDevice(true)}
-            className="bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 backdrop-blur-sm transition-all"
+            className="h-10 px-4 rounded-xl bg-orange-500/90 hover:bg-orange-500 text-white font-light transition-all"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Device
@@ -494,7 +500,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
         ) : (
           <Button
             onClick={handleCancel}
-            className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-white backdrop-blur-sm"
+            className="h-10 px-4 rounded-xl bg-white/10 hover:bg-red-500/20 text-white/90 font-light transition-all"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -502,99 +508,109 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
         )}
       </div>
 
-      {/* Add Device Form */}
+      {/* Add Device Form - Slide-up panel */}
       {showAddForm && (
-        <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-black/95 border border-white/10 rounded-lg p-6 backdrop-blur-md">
-          <h3 className="text-lg font-light mb-4">Add New Device</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-white/60 font-light mb-1 block">Raspberry Pi Unit</label>
-              {availablePis.length > 0 ? (
-                <select
-                  value={newDevice.pi_id}
-                  onChange={(e) => handlePiChange(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Select a Raspberry Pi Unit</option>
-                  {availablePis.map((pi) => (
-                    <option key={pi.pi_id} value={pi.pi_id}>
-                      {pi.pi_id}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  value={newDevice.pi_id}
-                  onChange={(e) => setNewDevice({ ...newDevice, pi_id: e.target.value })}
-                  placeholder="e.g., Pi-001"
-                  className="bg-white/5 border-white/10 text-white"
-                />
-              )}
-            </div>
-            <div>
-              <label className="text-xs text-white/60 font-light mb-1 block">Device ID (MAC Address)</label>
-              {newDevice.pi_id && filteredDevices.length > 0 ? (
-                <select
-                  value={newDevice.device_id}
-                  onChange={(e) => {
-                    setFormError(null); // Clear error when device changes
-                    setNewDevice({ ...newDevice, device_id: e.target.value });
-                  }}
-                  className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Select a Device</option>
-                  {filteredDevices.map((device) => (
-                    <option key={device.device_id} value={device.device_id}>
-                      {device.device_id}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  value={newDevice.device_id}
-                  onChange={(e) => {
-                    setFormError(null); // Clear error when device changes
-                    setNewDevice({ ...newDevice, device_id: e.target.value });
-                  }}
-                  placeholder={newDevice.pi_id ? "No devices available for this PI" : "Select a PI first"}
-                  className="bg-white/5 border-white/10 text-white"
-                  disabled={!newDevice.pi_id}
-                />
-              )}
-            </div>
-            {formError && (
-              <div className="p-3 border border-red-500/20 bg-red-500/10 rounded-md">
-                <p className="text-sm text-red-400 font-light">{formError}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
+        <div className="absolute inset-x-0 bottom-0 z-[1000] rounded-t-2xl bg-black/98 backdrop-blur-xl border border-white/10 border-b-0 shadow-[0_-8px_32px_rgba(0,0,0,0.5)]">
+          <div className="w-12 h-1 rounded-full bg-white/20 mx-auto mt-3 mb-1" />
+          <div className="p-6 pb-8 max-h-[70vh] overflow-y-auto">
+            <h3 className="text-lg font-light mb-4">Add New Device</h3>
+            <div className="space-y-4">
               <div>
-                <label className="text-xs text-white/60 font-light mb-1 block">Latitude</label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={newDevice.latitude}
-                  onChange={(e) => setNewDevice({ ...newDevice, latitude: e.target.value })}
-                  placeholder="40.7128"
-                  className="bg-white/5 border-white/10 text-white"
-                />
+                <label className="text-xs text-white/50 font-light mb-2 block">Raspberry Pi Unit</label>
+                {availablePis.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {availablePis.map((pi) => (
+                      <button
+                        key={pi.pi_id}
+                        type="button"
+                        onClick={() => handlePiChange(pi.pi_id)}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-light transition-all ${
+                          newDevice.pi_id === pi.pi_id
+                            ? "bg-orange-500/80 text-white"
+                            : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
+                        }`}
+                      >
+                        {pi.pi_id}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <Input
+                    value={newDevice.pi_id}
+                    onChange={(e) => setNewDevice({ ...newDevice, pi_id: e.target.value })}
+                    placeholder="e.g., Pi-001"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
+                  />
+                )}
               </div>
               <div>
-                <label className="text-xs text-white/60 font-light mb-1 block">Longitude</label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={newDevice.longitude}
-                  onChange={(e) => setNewDevice({ ...newDevice, longitude: e.target.value })}
-                  placeholder="-74.0060"
-                  className="bg-white/5 border-white/10 text-white"
-                />
+                <label className="text-xs text-white/50 font-light mb-2 block">Device ID</label>
+                {newDevice.pi_id && filteredDevices.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto py-1">
+                    {filteredDevices.map((device) => (
+                      <button
+                        key={device.device_id}
+                        type="button"
+                        onClick={() => {
+                          setFormError(null);
+                          setNewDevice({ ...newDevice, device_id: device.device_id });
+                        }}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-mono font-light transition-all truncate max-w-full ${
+                          newDevice.device_id === device.device_id
+                            ? "bg-orange-500/80 text-white"
+                            : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
+                        }`}
+                        title={device.device_id}
+                      >
+                        {device.device_id}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <Input
+                    value={newDevice.device_id}
+                    onChange={(e) => {
+                      setFormError(null);
+                      setNewDevice({ ...newDevice, device_id: e.target.value });
+                    }}
+                    placeholder={newDevice.pi_id ? "No devices for this PI" : "Select a PI first"}
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
+                    disabled={!newDevice.pi_id}
+                  />
+                )}
               </div>
-            </div>
-            <div>
-              <label className="text-xs text-white/60 font-light mb-1 block">Bucket Dimensions (required, in cm)</label>
-              <div className="grid grid-cols-3 gap-3">
+              {formError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-400 font-light">{formError}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="text-xs text-white/50 font-light mb-1 block">Latitude</label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={newDevice.latitude}
+                    onChange={(e) => setNewDevice({ ...newDevice, latitude: e.target.value })}
+                    placeholder="40.7128"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 font-light mb-1 block">Longitude</label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={newDevice.longitude}
+                    onChange={(e) => setNewDevice({ ...newDevice, longitude: e.target.value })}
+                    placeholder="-74.0060"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-white/50 font-light mb-2 block">Bucket Dimensions (cm)</label>
+                <div className="grid grid-cols-3 gap-3">
                   <Input
                     type="number"
                     step="any"
@@ -602,60 +618,54 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
                     value={newDevice.height}
                     onChange={(e) => setNewDevice({ ...newDevice, height: e.target.value })}
                     placeholder="Height"
-                    className="bg-white/5 border-white/10 text-white"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
                   />
-                </div>
-                <div>
                   <Input
                     type="number"
                     step="any"
                     min="0"
                     value={newDevice.top_diameter}
                     onChange={(e) => setNewDevice({ ...newDevice, top_diameter: e.target.value })}
-                    placeholder="Top Diameter"
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="Top"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
                   />
-                </div>
-                <div>
                   <Input
                     type="number"
                     step="any"
                     min="0"
                     value={newDevice.bottom_diameter}
                     onChange={(e) => setNewDevice({ ...newDevice, bottom_diameter: e.target.value })}
-                    placeholder="Bottom Diameter"
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="Bottom"
+                    className="h-11 rounded-xl bg-white/5 border-white/10 text-white"
                   />
                 </div>
               </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={handleAddDevice}
+                  className="flex-1 h-11 rounded-xl bg-orange-500/90 hover:bg-orange-500 text-white font-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!newDevice.device_id || !newDevice.pi_id || !newDevice.latitude || !newDevice.longitude || !newDevice.height || !newDevice.top_diameter || !newDevice.bottom_diameter}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Add Device
+                </Button>
+                <Button
+                  onClick={handleCancel}
+                  variant="outline"
+                  className="h-11 rounded-xl border-white/20 text-white/80 hover:bg-white/10"
+                >
+                  Cancel
+                </Button>
+              </div>
+              <p className="text-xs text-white/40 font-light">Click on the map to place, or edit coordinates above</p>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleAddDevice}
-                className="flex-1 bg-white/10 hover:bg-orange-500/20 border border-white/20 hover:border-orange-500/40 text-white hover:text-orange-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!newDevice.device_id || !newDevice.pi_id || !newDevice.latitude || !newDevice.longitude || !newDevice.height || !newDevice.top_diameter || !newDevice.bottom_diameter}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Add Device
-              </Button>
-              <Button
-                onClick={handleCancel}
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                Cancel
-              </Button>
-            </div>
-            <p className="text-xs text-white/40 font-light">
-              {isAddingDevice ? "Click on the map to place device, or enter coordinates manually" : ""}
-            </p>
           </div>
         </div>
       )}
 
-      {/* Carousel inside map */}
+      {/* Device details - bottom sheet (same position as Add Device form) */}
       {carousel && (
-        <div className="absolute bottom-4 left-4 z-[1000]">
+        <div className="absolute inset-x-0 bottom-0 z-[1000] flex justify-center px-4">
           {carousel}
         </div>
       )}

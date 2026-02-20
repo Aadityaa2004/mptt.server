@@ -14,7 +14,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed left-4 right-4 sm:left-6 sm:right-6 z-50 rounded-2xl border-white/10 bg-black/60 backdrop-blur-md shadow-lg">
+    <nav className="fixed left-4 right-4 sm:left-6 sm:right-6 z-50 rounded-2xl border-border bg-background/80 backdrop-blur-md shadow-lg dark:bg-black/60 dark:border-white/10">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center">
           {/* Logo */}
@@ -27,7 +27,7 @@ export default function Navbar() {
                 height={32}
                 className="object-contain"
               />
-              <span className="text-lg font-light text-white hidden sm:block">MapleSense</span>
+              <span className="text-lg font-light text-foreground hidden sm:block">MapleSense</span>
             </div>
           ) : (
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -38,7 +38,7 @@ export default function Navbar() {
                 height={32}
                 className="object-contain"
               />
-              <span className="text-lg font-light text-white hidden sm:block">MapleSense</span>
+              <span className="text-lg font-light text-foreground hidden sm:block">MapleSense</span>
             </Link>
           )}
 
@@ -47,22 +47,40 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href={user?.role === "admin" ? "/admin/dashboard" : "/user/dashboard"}
-                  className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                  href={user?.role === "admin" ? "/admin/overview" : "/user/dashboard"}
+                  className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                 >
-                  Dashboard
+                  {user?.role === "admin" ? "Overview" : "Dashboard"}
                 </Link>
                 {user?.role === "admin" && (
                   <>
                     <Link
-                      href="/admin/sensors"
-                      className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                      href="/admin/users"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                     >
-                      Sensors
+                      Users
+                    </Link>
+                    <Link
+                      href="/admin/pis"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
+                    >
+                      PIs
+                    </Link>
+                    <Link
+                      href="/admin/devices"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
+                    >
+                      Devices
+                    </Link>
+                    <Link
+                      href="/admin/readings"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
+                    >
+                      Readings
                     </Link>
                     <Link
                       href="/admin/settings"
-                      className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                     >
                       Settings
                     </Link>
@@ -72,19 +90,19 @@ export default function Navbar() {
                   <>
                     <Link
                       href="/user/forecast"
-                      className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                     >
                       Forecast
                     </Link>
                     <Link
                       href="/user/sensors"
-                      className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                     >
                       My Sensors
                     </Link>
                     <Link
                       href="/user/settings"
-                      className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                      className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                     >
                       Settings
                     </Link>
@@ -95,25 +113,25 @@ export default function Navbar() {
               <>
                 <Link
                   href="/"
-                  className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                  className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                 >
                   Home
                 </Link>
                 <Link
                   href="/about-us"
-                  className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                  className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                 >
                   About Us
                 </Link>
                 <Link
                   href="/contact-us"
-                  className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                  className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                 >
                   Contact Us
                 </Link>
                 <Link
                   href="/products"
-                  className="text-sm font-light text-white/90 hover:text-white transition-colors"
+                  className="text-sm font-light text-foreground/90 hover:text-foreground transition-colors"
                 >
                   Products
                 </Link>

@@ -35,13 +35,17 @@ func (r *PostgresPiRepository) GetPi(ctx context.Context, piID string) (*hardwar
 	query := `SELECT pi_id, user_id FROM pis WHERE pi_id = $1`
 
 	var pi hardware_models.Pi
+	var userID sql.NullString
 
-	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &pi.UserID)
+	err := r.db.QueryRowContext(ctx, query, piID).Scan(&pi.PiID, &userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if userID.Valid {
+		pi.UserID = userID.String
 	}
 
 	return &pi, nil
@@ -69,9 +73,13 @@ func (r *PostgresPiRepository) ListPis(ctx context.Context, userID string, page,
 	var pis []hardware_models.Pi
 	for rows.Next() {
 		var pi hardware_models.Pi
+		var userID sql.NullString
 
-		if err := rows.Scan(&pi.PiID, &pi.UserID); err != nil {
+		if err := rows.Scan(&pi.PiID, &userID); err != nil {
 			return nil, err
+		}
+		if userID.Valid {
+			pi.UserID = userID.String
 		}
 
 		pis = append(pis, pi)
@@ -117,6 +125,16 @@ func (r *PostgresPiRepository) UpdatePi(ctx context.Context, pi hardware_models.
 	}
 
 	return nil
+}
+
+// UnassignPisByUserID sets user_id to NULL for all PIs assigned to the given user
+func (r *PostgresPiRepository) UnassignPisByUserID(ctx context.Context, userID string) (int64, error) {
+	query := `UPDATE pis SET user_id = NULL WHERE user_id = $1`
+	result, err := r.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 // Delete pi

@@ -1,5 +1,7 @@
 # MPT.MQTT_Server
 
+This project is licensed under the MIT License—see [LICENSE](LICENSE).
+
 A **true microservice architecture** for high-performance MQTT data ingestion with Role-Based Access Control (RBAC). Built in Go, this system handles IoT sensor data from MQTT brokers and provides a complete REST API for data management. Specifically designed for IoT applications, particularly maple syrup farm monitoring systems, with support for both development and production environments.
 
 ## 🏗️ **Microservice Architecture Overview**
