@@ -171,6 +171,9 @@ const deviceLocationService = {
       latitude: location.latitude,
       longitude: location.longitude,
       color: location.color,
+      height: location.height,
+      top_diameter: location.top_diameter,
+      bottom_diameter: location.bottom_diameter,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -190,7 +190,7 @@ export default function AdminReadingsPage() {
   };
 
   return (
-    <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+    <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-start justify-between">
           <div>

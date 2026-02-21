@@ -9,9 +9,6 @@ import { sensorService, type Pi } from "@/services/api/sensorService";
 import { usePiPreferences, colorToGradient } from "@/hooks/usePiPreferences";
 import { MarkerShapeComponent } from "@/components/map/MarkerShape";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-
-
 export default function SettingsPage() {
   const { user, isLoading } = useRequireAuth("user");
   const { preferences, getPreference, updatePreference, initializePreferences, loadColorsFromBackend, isLoadingFromBackend } = usePiPreferences();
@@ -25,6 +22,8 @@ export default function SettingsPage() {
   const [isLoadingPis, setIsLoadingPis] = useState(false);
   const [openColorPickers, setOpenColorPickers] = useState<Record<string, boolean>>({});
   const [customColors, setCustomColors] = useState<Record<string, string>>({});
+  const [sapAlertThreshold, setSapAlertThreshold] = useState<number | null>(null);
+  const [isUpdatingSapAlert, setIsUpdatingSapAlert] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -63,11 +62,14 @@ export default function SettingsPage() {
     try {
       setIsCheckingLocation(true);
       const profile = await weatherService.getProfile();
-      if (profile && profile.latitude !== null && profile.latitude !== undefined && 
+      if (profile && profile.latitude !== null && profile.latitude !== undefined &&
           profile.longitude !== null && profile.longitude !== undefined) {
         setHasLocation(true);
       } else {
         setHasLocation(false);
+      }
+      if (profile && profile.sap_alert_threshold_percent !== null && profile.sap_alert_threshold_percent !== undefined) {
+        setSapAlertThreshold(profile.sap_alert_threshold_percent);
       }
     } catch (err) {
       console.error("Error checking location:", err);
@@ -75,6 +77,26 @@ export default function SettingsPage() {
       setHasLocation(false);
     } finally {
       setIsCheckingLocation(false);
+    }
+  };
+
+  const handleSapAlertSave = async (value: number | null) => {
+    try {
+      setIsUpdatingSapAlert(true);
+      setError(null);
+      setSuccess(null);
+      await weatherService.updateProfile({
+        sap_alert_threshold_percent: value === null || value === undefined ? null : Math.min(100, Math.max(0, value)),
+      });
+      setSapAlertThreshold(value === null || value === undefined ? null : Math.min(100, Math.max(0, value)));
+      setSuccess("Sap alert threshold updated successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error("Error updating sap alert threshold:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to update sap alert threshold";
+      setError(errorMessage);
+    } finally {
+      setIsUpdatingSapAlert(false);
     }
   };
 
@@ -111,7 +133,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-light tracking-tight mb-2">
@@ -136,13 +158,45 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Theme */}
+          {/* Sap Alert Settings */}
           <div className="relative z-10 border border-border rounded-lg p-8 bg-card mb-6">
-            <h2 className="text-2xl font-light mb-2 text-foreground">Appearance</h2>
-            <p className="text-muted-foreground font-light text-sm mb-4">
-              Choose light or dark theme for the application.
+            <h2 className="text-2xl font-light mb-4">Sap Level Alert</h2>
+            <p className="text-white/60 font-light text-sm mb-6">
+              Get an email alert when your sap level exceeds a certain fill percentage. Set a threshold (0–100%) or leave empty to use the default system threshold.
             </p>
-            <ThemeToggle />
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="text-sm font-light text-white/80">Alert when fill exceeds (%)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={sapAlertThreshold ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSapAlertThreshold(v === "" ? null : Math.min(100, Math.max(0, parseInt(v, 10) || 0)));
+                }}
+                placeholder="e.g. 80"
+                className="w-24 h-10 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white font-light focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => handleSapAlertSave(sapAlertThreshold)}
+                disabled={isUpdatingSapAlert}
+                className="px-4 py-2 rounded-md bg-orange-500/90 hover:bg-orange-500 text-white text-sm font-light transition-colors disabled:opacity-50"
+              >
+                {isUpdatingSapAlert ? "Saving..." : "Save"}
+              </button>
+              {sapAlertThreshold !== null && (
+                <button
+                  type="button"
+                  onClick={() => handleSapAlertSave(null)}
+                  disabled={isUpdatingSapAlert}
+                  className="px-4 py-2 rounded-md border border-white/20 text-white/70 hover:text-white hover:bg-white/10 text-sm font-light transition-colors disabled:opacity-50"
+                >
+                  Use default
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Location Settings */}

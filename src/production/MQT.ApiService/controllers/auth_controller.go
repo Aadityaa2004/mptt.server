@@ -264,11 +264,12 @@ func (h *AuthController) UpdateProfile(c *gin.Context) {
 	}
 
 	var req struct {
-		Username  string   `json:"username,omitempty"`
-		Email     string   `json:"email,omitempty"`
-		Password  string   `json:"password,omitempty"`
-		Latitude  *float64 `json:"latitude,omitempty"`
-		Longitude *float64 `json:"longitude,omitempty"`
+		Username               string   `json:"username,omitempty"`
+		Email                  string   `json:"email,omitempty"`
+		Password               string   `json:"password,omitempty"`
+		Latitude               *float64 `json:"latitude,omitempty"`
+		Longitude              *float64 `json:"longitude,omitempty"`
+		SapAlertThresholdPct   *int     `json:"sap_alert_threshold_percent,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -304,6 +305,14 @@ func (h *AuthController) UpdateProfile(c *gin.Context) {
 	}
 	if req.Longitude != nil {
 		user.Longitude = req.Longitude
+	}
+	if req.SapAlertThresholdPct != nil {
+		pct := *req.SapAlertThresholdPct
+		if pct < 0 || pct > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "sap_alert_threshold_percent must be between 0 and 100"})
+			return
+		}
+		user.SapAlertThresholdPct = req.SapAlertThresholdPct
 	}
 
 	// Update user in database

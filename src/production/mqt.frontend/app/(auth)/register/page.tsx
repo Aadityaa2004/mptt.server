@@ -84,11 +84,11 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
-      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
+      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-light tracking-tight mb-3">
+            <h1 className="text-2xl sm:text-4xl font-light tracking-tight mb-3">
               Create Account
             </h1>
             <p className="text-white/60 font-light text-sm">

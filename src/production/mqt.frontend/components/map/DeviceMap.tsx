@@ -300,7 +300,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
 
   if (!mounted) {
     return (
-      <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-white/10 flex items-center justify-center bg-black/50">
+      <div className="relative w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-lg overflow-hidden border border-white/10 flex items-center justify-center bg-black/50">
         <div className="text-white/60 font-light">Loading map...</div>
       </div>
     );
@@ -308,7 +308,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
 
   if (mapError) {
     return (
-      <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-red-500/20 bg-red-500/10 flex items-center justify-center">
+      <div className="relative w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-lg overflow-hidden border border-red-500/20 bg-red-500/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-400 font-light mb-2">Map Error</div>
           <div className="text-white/60 text-sm font-light mb-4">{mapError}</div>
@@ -328,7 +328,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
   }
 
   return (
-    <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-white/10 bg-black/30">
+    <div className="relative w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-2xl overflow-hidden border border-white/10 bg-black/30">
       <Map
         ref={mapRef}
         {...viewState}
@@ -409,7 +409,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       </Map>
 
       {/* Map Centering Controls */}
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-[1000] flex flex-col gap-1.5 sm:gap-2">
         <div className="flex flex-col gap-1.5 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2">
           <Button
             onClick={handleSetToCurrentLocation}
@@ -488,7 +488,7 @@ export function DeviceMap({ devices, onDeviceAdd, onDeviceClick, center = [40.71
       </div>
 
       {/* Add Device Button */}
-      <div className="absolute top-4 right-4 z-[1000]">
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000]">
         {!isAddingDevice ? (
           <Button
             onClick={() => setIsAddingDevice(true)}

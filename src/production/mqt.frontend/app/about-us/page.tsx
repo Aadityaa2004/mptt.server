@@ -48,7 +48,7 @@ export default function AboutUsPage() {
       <Navbar />
 
       {/* Main Content */}
-      <main className="relative z-20 px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+      <main className="relative z-20 px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-12 sm:pb-20">
         <div className="container mx-auto max-w-6xl">
           {/* Hero Section */}
           <div className="relative mb-20 pt-16 pb-16 min-h-[40vh] rounded-2xl overflow-hidden">

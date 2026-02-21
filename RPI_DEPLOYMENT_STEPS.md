@@ -358,16 +358,6 @@ docker exec nginx-proxy nginx -t
 docker compose -f docker-compose.rpi.yml restart nginx
 ```
 
-### mqt-email-service Not in Config / "no such service"
-
-If `docker compose -f docker-compose.rpi.yml config --services` does not list `mqt-email-service`, you likely have `docker-compose.rpi.override.yml` in the directory. That override is for **local testing only** and causes the email service to be excluded.
-
-**Fix:** Remove the override for production:
-```bash
-rm -f docker-compose.rpi.override.yml
-docker compose -f docker-compose.rpi.yml config --services   # should now include mqt-email-service
-```
-
 ### Images Not Pulling
 
 ```bash
@@ -417,6 +407,29 @@ docker compose -f docker-compose.rpi.yml up -d
 docker compose -f docker-compose.rpi.yml pull
 docker compose -f docker-compose.rpi.yml up -d
 ```
+
+---
+
+## Troubleshooting
+
+### `pq: column "collection_enabled" of relation "devices" does not exist`
+
+This happens when the database was created before the `collection_enabled` column was added to the schema. **Fix immediately** by running the migration on the Pi:
+
+```bash
+# From the cloned repo on the Pi
+docker exec -i postgresql-prod psql -U ${POSTGRES_USER} -d ${POSTGRES_DB:-iot} < docs/migrations/001_add_device_collection_enabled.sql
+```
+
+Or with explicit values (replace with your `.env.production` values):
+
+```bash
+docker exec -i postgresql-prod psql -U iot_user -d iot -c "ALTER TABLE devices ADD COLUMN IF NOT EXISTS collection_enabled BOOLEAN DEFAULT true;"
+```
+
+Then restart the API service: `docker compose -f docker-compose.rpi.yml restart api-service`
+
+**Going forward:** The API startup logic now applies this migration automatically. Rebuild and redeploy the `api-service` image to pick up the fix.
 
 ---
 

@@ -200,6 +200,9 @@ func (c *InternalController) checkAndSendAlert(piID, deviceID string, sensorDist
 	fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, sensorDistance)
 
 	threshold := float64(c.config.Alert.BucketThreshold)
+	if user.SapAlertThresholdPct != nil && *user.SapAlertThresholdPct >= 0 && *user.SapAlertThresholdPct <= 100 {
+		threshold = float64(*user.SapAlertThresholdPct)
+	}
 	if fillPct < threshold {
 		return
 	}

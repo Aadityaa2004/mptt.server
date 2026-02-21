@@ -17,7 +17,7 @@ const DeviceMap = dynamic(
         return {
           default: function DeviceMapFallback() {
             return (
-              <div className="w-full h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
+              <div className="w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
                 <div className="text-white/60 font-light">Failed to load map. Please refresh the page.</div>
               </div>
             );
@@ -27,7 +27,7 @@ const DeviceMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
+      <div className="w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-2xl border border-white/10 flex items-center justify-center bg-black/30">
         <div className="text-white/60 font-light">Loading map...</div>
       </div>
     ),
@@ -305,7 +305,7 @@ export default function UserDashboardPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-20">
+      <main className="pt-16 sm:pt-20">
         <div className="max-w-[1600px] mx-auto">
           {/* Header - minimal */}
           <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
@@ -366,7 +366,7 @@ export default function UserDashboardPage() {
             <div className="px-4 sm:px-6 lg:px-8 pb-8 -mt-2">
             <ErrorBoundary
               fallback={
-                <div className="w-full h-[600px] rounded-2xl border border-red-500/20 bg-red-500/5 flex items-center justify-center">
+                <div className="w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-2xl border border-red-500/20 bg-red-500/5 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-red-400 font-light mb-2">Failed to load map</p>
                     <button

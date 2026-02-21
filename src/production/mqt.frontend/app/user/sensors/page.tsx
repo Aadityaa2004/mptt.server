@@ -6,7 +6,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import Navbar from "@/components/navbar/Navbar";
 import { sensorService, type Pi, type PiDevice } from "@/services/api/sensorService";
 import { DeviceCard } from "@/components/sensors/DeviceCard";
-import { Loader2, AlertCircle, Cpu, Radio, Activity, Database } from "lucide-react";
+import { Loader2, AlertCircle, Cpu, Radio, RefreshCw } from "lucide-react";
 
 interface PiWithDevices extends Pi {
   devices: PiDevice[];
@@ -83,7 +83,7 @@ export default function MySensorsPage() {
     };
   }, [pis]);
 
-  if (isLoading || isLoadingSensors) {
+  if (isLoading || (isLoadingSensors && pis.length === 0)) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -97,99 +97,80 @@ export default function MySensorsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-7xl mx-auto">
-          {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-light tracking-tight mb-2">
-              My Sensors
-            </h1>
-            {/* <p className="text-white/60 font-light text-sm">
-              View and manage your sensor devices
-            </p> */}
+      <main className="pt-16 sm:pt-20">
+        <div className="max-w-[1600px] mx-auto">
+          {/* Header */}
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground">My Sensors</h1>
+              {pis.length > 0 && (
+                <p className="text-white/50 font-light text-sm mt-1">
+                  {stats.totalDevices} device{stats.totalDevices !== 1 ? "s" : ""} across {stats.totalPis} PI{stats.totalPis !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => loadSensors()}
+              disabled={isLoadingSensors}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white disabled:opacity-50 transition-all"
+              title="Refresh sensors"
+            >
+              <RefreshCw className={`h-5 w-5 ${isLoadingSensors ? "animate-spin" : ""}`} />
+            </button>
           </div>
 
-          {/* Summary Statistics */}
-          {pis.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-              <div className="border border-white/10 rounded-lg p-4 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="text-white/60 font-light text-xs">Total Devices</p>
-                    <p className="text-xl font-light">{stats.totalDevices}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="border border-white/10 rounded-lg p-4 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="text-white/60 font-light text-xs">Raspberry Pi Units</p>
-                    <p className="text-xl font-light">{stats.totalPis}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {error && (
-            <div className="mb-6 p-4 border border-red-500/20 bg-red-500/10 rounded-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-400" />
+            <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-red-500/5 border border-red-500/20 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
               <p className="text-sm text-red-400 font-light">{error}</p>
             </div>
           )}
 
           {pis.length === 0 && !isLoadingSensors ? (
-            <div className="border border-white/10 rounded-lg p-12 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm text-center">
-              <Radio className="h-12 w-12 text-white/40 mx-auto mb-4" />
-              <p className="text-white/60 font-light mb-2">No sensors found</p>
-              <p className="text-white/40 font-light text-sm">
-                Your sensors will appear here once they are registered
-              </p>
-            </div>
+            <section className="px-4 sm:px-6 lg:px-8 py-16 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Radio className="h-8 w-8 text-white/40" />
+                </div>
+                <p className="text-white/70 font-light mb-2">No sensors yet</p>
+                <p className="text-white/45 font-light text-sm">
+                  Your sensors will appear here once they are registered and connected.
+                </p>
+              </div>
+            </section>
           ) : (
-            <div className="space-y-6">
+            <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
               {pis.map((pi) => (
-                <div
-                  key={pi.pi_id}
-                  className="border border-white/10 rounded-lg bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm overflow-hidden transition-all duration-200 hover:border-white/15"
-                >
-                  {/* PI Header */}
-                  <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <h2 className="text-xl font-light">Raspberry Pi Unit: <span className="text-white/60 font-bold text-sm bg-orange-500/80 px-2 py-1 rounded-md">{pi.pi_id}</span></h2>
-                          <p className="text-white/60 font-light text-sm">
-                            {pi.devices.length} device{pi.devices.length !== 1 ? "s" : ""} connected
-                          </p>
-                        </div>
-                      </div>
+                <section key={pi.pi_id}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                      <Cpu className="h-4 w-4 text-orange-400/90" />
                     </div>
-                  </div>
-
-                  {/* Devices Grid */}
-                  {pi.devices.length > 0 ? (
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-                        {pi.devices.map((device) => (
-                          <DeviceCard
-                            key={device.device_id}
-                            device={{
-                              pi_id: pi.pi_id,
-                              device_id: device.device_id,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <p className="text-white/40 font-light text-sm">
-                        No devices connected to this PI
+                    <div>
+                      <h2 className="text-lg font-light text-foreground">{pi.pi_id}</h2>
+                      <p className="text-xs text-white/50 font-light">
+                        {pi.devices.length} device{pi.devices.length !== 1 ? "s" : ""}
                       </p>
                     </div>
+                  </div>
+                  {pi.devices.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {pi.devices.map((device) => (
+                        <DeviceCard
+                          key={device.device_id}
+                          device={{
+                            pi_id: pi.pi_id,
+                            device_id: device.device_id,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                      <p className="text-white/45 font-light text-sm">No devices connected to this PI</p>
+                    </div>
                   )}
-                </div>
+                </section>
               ))}
             </div>
           )}

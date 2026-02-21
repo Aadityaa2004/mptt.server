@@ -53,14 +53,15 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *auth_models.U
 
 // Read users
 func (r *PostgresUserRepository) GetByID(ctx context.Context, userID string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE user_id = $1`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE user_id = $1`
 
 	var user auth_models.User
 	var locationsJSON []byte
 	var emailVerifiedAt sql.NullTime
+	var sapAlertPct sql.NullInt64
 
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -76,6 +77,10 @@ func (r *PostgresUserRepository) GetByID(ctx context.Context, userID string) (*a
 	}
 	if emailVerifiedAt.Valid {
 		user.EmailVerifiedAt = &emailVerifiedAt.Time
+	}
+	if sapAlertPct.Valid {
+		pct := int(sapAlertPct.Int64)
+		user.SapAlertThresholdPct = &pct
 	}
 
 	return &user, nil
@@ -92,14 +97,15 @@ func (r *PostgresUserRepository) GetUser(ctx context.Context, userID string) (*a
 }
 
 func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE username = $1`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE username = $1`
 
 	var user auth_models.User
 	var locationsJSON []byte
 	var emailVerifiedAt sql.NullTime
+	var sapAlertPct sql.NullInt64
 
 	err := r.db.QueryRowContext(ctx, query, username).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -115,20 +121,25 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 	}
 	if emailVerifiedAt.Valid {
 		user.EmailVerifiedAt = &emailVerifiedAt.Time
+	}
+	if sapAlertPct.Valid {
+		pct := int(sapAlertPct.Int64)
+		user.SapAlertThresholdPct = &pct
 	}
 
 	return &user, nil
 }
 
 func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE email = $1`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE email = $1`
 
 	var user auth_models.User
 	var locationsJSON []byte
 	var emailVerifiedAt sql.NullTime
+	var sapAlertPct sql.NullInt64
 
 	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -145,12 +156,16 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 	if emailVerifiedAt.Valid {
 		user.EmailVerifiedAt = &emailVerifiedAt.Time
 	}
+	if sapAlertPct.Valid {
+		pct := int(sapAlertPct.Int64)
+		user.SapAlertThresholdPct = &pct
+	}
 
 	return &user, nil
 }
 
 func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users ORDER BY created_at DESC`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users ORDER BY created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -163,9 +178,10 @@ func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.Use
 		var user auth_models.User
 		var locationsJSON []byte
 		var emailVerifiedAt sql.NullTime
+		var sapAlertPct sql.NullInt64
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
-			&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -177,6 +193,10 @@ func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*auth_models.Use
 		}
 		if emailVerifiedAt.Valid {
 			user.EmailVerifiedAt = &emailVerifiedAt.Time
+		}
+		if sapAlertPct.Valid {
+			pct := int(sapAlertPct.Int64)
+			user.SapAlertThresholdPct = &pct
 		}
 
 		users = append(users, &user)
@@ -195,10 +215,10 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 	var args []interface{}
 
 	if role != "" {
-		query = `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		query = `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 		args = []interface{}{role, pageSize, offset}
 	} else {
-		query = `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		query = `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 		args = []interface{}{pageSize, offset}
 	}
 
@@ -213,9 +233,10 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 		var user auth_models.User
 		var locationsJSON []byte
 		var emailVerifiedAt sql.NullTime
+		var sapAlertPct sql.NullInt64
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password,
-			&user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			&user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -227,6 +248,10 @@ func (r *PostgresUserRepository) List(ctx context.Context, page, pageSize int, r
 		}
 		if emailVerifiedAt.Valid {
 			user.EmailVerifiedAt = &emailVerifiedAt.Time
+		}
+		if sapAlertPct.Valid {
+			pct := int(sapAlertPct.Int64)
+			user.SapAlertThresholdPct = &pct
 		}
 
 		users = append(users, user)
@@ -260,12 +285,17 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *auth_models.U
 
 	query := `
 		UPDATE users 
-		SET username = $1, email = $2, password = $3, role = $4, active = $5, email_verified_at = $6, latitude = $7, longitude = $8, locations = $9, updated_at = $10 
-		WHERE user_id = $11
+		SET username = $1, email = $2, password = $3, role = $4, active = $5, email_verified_at = $6, latitude = $7, longitude = $8, locations = $9, sap_alert_threshold_percent = $10, updated_at = $11 
+		WHERE user_id = $12
 	`
 
+	var sapAlertVal interface{}
+	if user.SapAlertThresholdPct != nil {
+		sapAlertVal = *user.SapAlertThresholdPct
+	}
+
 	result, err := r.db.ExecContext(ctx, query, user.Username, user.Email, user.Password,
-		user.Role, user.Active, user.EmailVerifiedAt, user.Latitude, user.Longitude, locationsJSON, user.UpdatedAt, user.UserID)
+		user.Role, user.Active, user.EmailVerifiedAt, user.Latitude, user.Longitude, locationsJSON, sapAlertVal, user.UpdatedAt, user.UserID)
 	if err != nil {
 		return err
 	}
@@ -284,7 +314,7 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *auth_models.U
 
 // GetByRole retrieves users by role
 func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, role)
 	if err != nil {
@@ -297,10 +327,11 @@ func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]
 		var user auth_models.User
 		var locationsJSON []byte
 		var emailVerifiedAt sql.NullTime
+		var sapAlertPct sql.NullInt64
 
 		if err := rows.Scan(&user.UserID, &user.Username, &user.Email,
 			&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude,
-			&locationsJSON, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			&locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -312,6 +343,10 @@ func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]
 		}
 		if emailVerifiedAt.Valid {
 			user.EmailVerifiedAt = &emailVerifiedAt.Time
+		}
+		if sapAlertPct.Valid {
+			pct := int(sapAlertPct.Int64)
+			user.SapAlertThresholdPct = &pct
 		}
 
 		users = append(users, &user)
@@ -326,16 +361,17 @@ func (r *PostgresUserRepository) GetByRole(ctx context.Context, role string) ([]
 
 // GetUserByDeviceID finds the user whose locations JSONB array contains the given device_id
 func (r *PostgresUserRepository) GetUserByDeviceID(ctx context.Context, deviceID string) (*auth_models.User, error) {
-	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, created_at, updated_at FROM users WHERE locations @> $1::jsonb`
+	query := `SELECT user_id, username, email, password, role, active, email_verified_at, latitude, longitude, locations, sap_alert_threshold_percent, created_at, updated_at FROM users WHERE locations @> $1::jsonb`
 
 	searchJSON := fmt.Sprintf(`[{"device_id": "%s"}]`, deviceID)
 
 	var user auth_models.User
 	var locationsJSON []byte
 	var emailVerifiedAt sql.NullTime
+	var sapAlertPct sql.NullInt64
 
 	err := r.db.QueryRowContext(ctx, query, searchJSON).Scan(&user.UserID, &user.Username, &user.Email,
-		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Role, &user.Active, &emailVerifiedAt, &user.Latitude, &user.Longitude, &locationsJSON, &sapAlertPct, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -350,6 +386,10 @@ func (r *PostgresUserRepository) GetUserByDeviceID(ctx context.Context, deviceID
 	}
 	if emailVerifiedAt.Valid {
 		user.EmailVerifiedAt = &emailVerifiedAt.Time
+	}
+	if sapAlertPct.Valid {
+		pct := int(sapAlertPct.Int64)
+		user.SapAlertThresholdPct = &pct
 	}
 
 	return &user, nil

@@ -84,7 +84,7 @@ function VerifyEmailContent() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navbar />
-        <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
+        <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 sm:py-16">
           <div className="text-center">
             <h1 className="text-2xl font-light mb-4">Invalid verification link</h1>
             <p className="text-white/60 mb-6">
@@ -102,10 +102,10 @@ function VerifyEmailContent() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
+      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-light tracking-tight mb-3">Verify your email</h1>
+            <h1 className="text-2xl sm:text-4xl font-light tracking-tight mb-3">Verify your email</h1>
             <p className="text-white/60 font-light text-sm">
               We sent a 6-digit code to <span className="text-white/80">{email}</span>
             </p>

@@ -31,6 +31,7 @@ export default function SensorAnalyticsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [collectionEnabled, setCollectionEnabled] = useState<boolean | null>(null);
   const [isTogglingCollection, setIsTogglingCollection] = useState(false);
+  const [deviceHeight, setDeviceHeight] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && user && deviceId) {
@@ -58,7 +59,10 @@ export default function SensorAnalyticsPage() {
     if (piId && deviceId) {
       loadLatestReading();
       loadReadingsForStats();
-      sensorService.getDevice(piId, deviceId).then((d) => setCollectionEnabled(d.collection_enabled !== false)).catch(() => setCollectionEnabled(null));
+      sensorService.getDevice(piId, deviceId).then((d) => {
+        setCollectionEnabled(d.collection_enabled !== false);
+        if (d.height != null) setDeviceHeight(d.height);
+      }).catch(() => setCollectionEnabled(null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piId, deviceId]);
@@ -261,183 +265,177 @@ export default function SensorAnalyticsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-7xl mx-auto">
+      <main className="pt-16 sm:pt-20">
+        <div className="max-w-[1600px] mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
             <Button
               variant="ghost"
               onClick={() => router.push("/user/sensors")}
-              className="mb-5 text-black bg-white/80 hover:bg-white/70 hover:text-black"
+              className="mb-4 -ml-2 text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-xl font-light text-sm"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Sensors
             </Button>
-            <h1 className="text-4xl font-light tracking-tight mb-2 text-white">
-              Sensor Analytics
-            </h1>
-            <div className="flex items-center gap-2">
-              <p className="text-white/60 font-light text-sm font-mono">
-                Device ID: {deviceId}
-              </p>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={copyDeviceId}
-                className="h-6 w-6 text-white/60 hover:text-white hover:bg-white/10"
-                title="Copy Device ID"
-              >
-                {copied ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Copy className="h-3 w-3" />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground">
+                  Sensor Analytics
+                </h1>
+                <div className="flex items-center gap-2 mt-2">
+                  <p className="text-white/60 font-light text-sm font-mono">
+                    {deviceId}
+                  </p>
+                  <button
+                    onClick={copyDeviceId}
+                    className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                    title="Copy"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {piId && collectionEnabled !== null && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-white/50 font-light">Collection</span>
+                    <button
+                      onClick={handleToggleCollection}
+                      disabled={isTogglingCollection}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-light transition-colors ${collectionEnabled ? "bg-green-500/20 text-green-400" : "bg-white/5 text-white/50"}`}
+                    >
+                      {isTogglingCollection ? "..." : collectionEnabled ? "On" : "Off"}
+                    </button>
+                  </div>
                 )}
-              </Button>
-            </div>
-            {piId && collectionEnabled !== null && (
-              <div className="flex items-center gap-3 mt-3">
-                <span className="text-white/60 font-light text-sm">Data collection:</span>
-                <button
-                  onClick={handleToggleCollection}
-                  disabled={isTogglingCollection}
-                  className={`px-3 py-1.5 rounded text-sm font-light transition-colors ${collectionEnabled ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/60"}`}
-                >
-                  {isTogglingCollection ? "Updating..." : collectionEnabled ? "On" : "Off"}
-                </button>
               </div>
-            )}
+            </div>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 border border-red-500/20 bg-red-500/10 rounded-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-400" />
+            <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-red-500/5 border border-red-500/20 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
               <p className="text-sm text-red-400 font-light">{error}</p>
             </div>
           )}
 
-          {/* Latest Reading Card */}
+          {/* Current Reading */}
           {latestReading && (
-            <div className="mb-6 border border-white/10 rounded-lg p-6 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm">
+            <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-light">Current Reading</h2>
+                <h2 className="text-lg font-light text-white/90">Current Reading</h2>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={refreshSensorData}
                   disabled={isRefreshing}
-                  className="h-8 w-8 text-orange-400 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-50 border border-orange-400/90 border-2"
-                  title="Refresh sensor data"
-                > 
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  className="h-9 w-9 rounded-xl bg-white/5 hover:bg-orange-500/20 text-white/70 hover:text-orange-400 disabled:opacity-50"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-wrap gap-3 sm:gap-4">
                 {latestReading.payload.sensors.temperature && (
-                  <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Thermometer className="h-5 w-5 text-white/60" />
-                      <span className="text-sm text-white/60 font-light">Temperature</span>
-                    </div>
-                    <div className="text-2xl font-light">
-                      {latestReading.payload.sensors.temperature.value.toFixed(1)}
-                      <span className="text-sm text-white/60 ml-1">
-                        °{latestReading.payload.sensors.temperature.unit === "fahrenheit" || latestReading.payload.sensors.temperature.unit === "F" ? "F" : latestReading.payload.sensors.temperature.unit === "celsius" || latestReading.payload.sensors.temperature.unit === "C" ? "C" : latestReading.payload.sensors.temperature.unit.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-xs text-white/40 font-light mt-1">
-                      {formatDateShort(latestReading.ts)}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/5 min-w-[140px]">
+                    <Thermometer className="h-5 w-5 text-orange-400/80" />
+                    <div>
+                      <div className="text-xl font-light">
+                        {latestReading.payload.sensors.temperature.value.toFixed(1)}°
+                        {latestReading.payload.sensors.temperature.unit === "fahrenheit" || latestReading.payload.sensors.temperature.unit === "F" ? "F" : latestReading.payload.sensors.temperature.unit === "celsius" || latestReading.payload.sensors.temperature.unit === "C" ? "C" : latestReading.payload.sensors.temperature.unit?.toUpperCase()}
+                      </div>
+                      <p className="text-xs text-white/50 font-light">Temperature</p>
                     </div>
                   </div>
                 )}
                 {latestReading.payload.sensors.level && (
-                  <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Droplets className="h-5 w-5 text-white/60" />
-                      <span className="text-sm text-white/60 font-light">Sap Level</span>
-                    </div>
-                    <div className="text-2xl font-light">
-                      {latestReading.payload.sensors.level.value.toFixed(1)}
-                      <span className="text-sm text-white/60 ml-1">
-                        {latestReading.payload.sensors.level.unit}
-                      </span>
-                    </div>
-                    <div className="text-xs text-white/40 font-light mt-1">
-                      {formatDateShort(latestReading.ts)}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/5 min-w-[140px]">
+                    <Droplets className="h-5 w-5 text-orange-400/80" />
+                    <div>
+                      {latestReading.fill_percentage != null ? (
+                        <>
+                          <div className="text-xl font-light">{latestReading.fill_percentage.toFixed(1)}% fill</div>
+                          <p className="text-xs text-white/50 font-light">Sap Level</p>
+                          {deviceHeight != null && (
+                            <p className="text-[11px] text-white/40 font-light mt-0.5">
+                              {Math.max(0, deviceHeight - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm remaining
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xl font-light">
+                            {latestReading.payload.sensors.level.value.toFixed(1)} {latestReading.payload.sensors.level.unit}
+                          </div>
+                          <p className="text-xs text-white/50 font-light">Sap Level</p>
+                          {deviceHeight != null && (
+                            <p className="text-[11px] text-white/40 font-light mt-0.5">
+                              {Math.max(0, deviceHeight - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm remaining
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
-                <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Battery className="h-5 w-5 text-white/60" />
-                    <span className="text-sm text-white/60 font-light">Battery</span>
-                  </div>
-                  <div className="text-2xl font-light">
-                    {latestReading.payload.battery_percentage.toFixed(1)}
-                    <span className="text-sm text-white/60 ml-1">%</span>
-                  </div>
-                  <div className="text-xs text-white/40 font-light mt-1">
-                    {formatDateShort(latestReading.ts)}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/5 min-w-[140px]">
+                  <Battery className="h-5 w-5 text-orange-400/80" />
+                  <div>
+                    <div className="text-xl font-light">{latestReading.payload.battery_percentage.toFixed(0)}%</div>
+                    <p className="text-xs text-white/50 font-light">Battery</p>
                   </div>
                 </div>
+                <div className="flex items-center self-center text-xs text-white/45 font-light ml-auto">
+                  {formatDateShort(latestReading.ts)}
+                </div>
               </div>
-            </div>
+            </section>
           )}
 
 
           {/* Readings Chart */}
           {readings && Array.isArray(readings) && readings.length > 0 && (
-            <div className="mb-6 border border-white/10 rounded-xl bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm overflow-hidden shadow-lg">
-              <div className="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-light text-white">Readings History</h2>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-white/70 font-light">Time Range:</span>
-                    <div className="flex gap-2">
-                      {(["1h", "1d", "1w", "1m", "1y"] as const).map((range) => (
-                        <Button
-                          key={range}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setTimeRange(range)}
-                          className={`text-xs px-4 py-2 h-8 font-light transition-all ${
-                            timeRange === range
-                              ? "bg-orange-500 text-white hover:bg-orange-500/90 shadow-md shadow-orange-500/30"
-                              : "text-white/70 hover:text-white hover:bg-orange-500/20 border border-orange-500/30"
-                          }`}
-                        >
-                          {range === "1h" ? "1 Hour" : range === "1d" ? "1 Day" : range === "1w" ? "1 Week" : range === "1m" ? "1 Month" : "1 Year"}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+            <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <h2 className="text-lg font-light text-white/90">Readings History</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(["1h", "1d", "1w", "1m", "1y"] as const).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setTimeRange(range)}
+                      className={`px-4 py-2 rounded-xl text-sm font-light transition-all ${
+                        timeRange === range
+                          ? "bg-orange-500/90 text-white"
+                          : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {range === "1h" ? "1H" : range === "1d" ? "1D" : range === "1w" ? "1W" : range === "1m" ? "1M" : "1Y"}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="p-6">
-                <ReadingsChart readings={readings} timeRange={timeRange} />
-              </div>
-            </div>
+              <ReadingsChart readings={readings} timeRange={timeRange} />
+            </section>
           )}
 
           {/* Readings Table */}
-          <div className="border border-white/10 rounded-lg bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/10">
-              <h2 className="text-xl font-light">Readings History</h2>
-            </div>
-            {piId ? (
-              <ReadingsTable deviceId={deviceId} piId={piId} />
-            ) : isFindingPi ? (
-              <div className="p-12 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-8 w-8 text-white/60 animate-spin" />
-                  <p className="text-white/60 font-light">Loading readings...</p>
+          <section className="px-4 sm:px-6 lg:px-8 py-6">
+            <h2 className="text-lg font-light text-white/90 mb-4">Data Log</h2>
+            <div className="rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02]">
+              {piId ? (
+                <ReadingsTable deviceId={deviceId} piId={piId} />
+              ) : isFindingPi ? (
+                <div className="p-16 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 text-white/40 animate-spin" />
+                    <p className="text-white/50 font-light text-sm">Loading readings...</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-12 text-center">
-                <p className="text-white/60 font-light">Device information is being loaded...</p>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="p-16 text-center">
+                  <p className="text-white/50 font-light text-sm">Loading device...</p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </main>
     </div>

@@ -53,9 +53,10 @@ type User struct {
 	EmailVerifiedAt *time.Time         `json:"email_verified_at,omitempty" db:"email_verified_at"`
 	Latitude       *float64            `json:"latitude,omitempty" db:"latitude"`
 	Longitude      *float64            `json:"longitude,omitempty" db:"longitude"`
-	Locations      DeviceLocationArray `json:"locations,omitempty" db:"locations"`
-	CreatedAt      time.Time           `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time           `json:"updated_at" db:"updated_at"`
+	Locations            DeviceLocationArray `json:"locations,omitempty" db:"locations"`
+	SapAlertThresholdPct *int                `json:"sap_alert_threshold_percent,omitempty" db:"sap_alert_threshold_percent"`
+	CreatedAt            time.Time           `json:"created_at" db:"created_at"`
+	UpdatedAt            time.Time           `json:"updated_at" db:"updated_at"`
 }
 
 // NewUser creates a new User instance

@@ -77,7 +77,7 @@ export default function SensorReadingsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">

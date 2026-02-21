@@ -143,7 +143,17 @@ const sensorService = {
   /**
    * Get a single device (for collection_enabled etc.). User can get devices for their own PIs.
    */
-  async getDevice(piId: string, deviceId: string): Promise<{ device_id: string; pi_id: string; collection_enabled?: boolean }> {
+  async getDevice(
+    piId: string,
+    deviceId: string
+  ): Promise<{
+    device_id: string;
+    pi_id: string;
+    collection_enabled?: boolean;
+    height?: number;
+    top_diameter?: number;
+    bottom_diameter?: number;
+  }> {
     const encodedDeviceId = encodeURIComponent(deviceId);
     const response = await apiFetch(`/pis/${piId}/devices/${encodedDeviceId}`, { method: "GET" });
     if (!response.ok) {

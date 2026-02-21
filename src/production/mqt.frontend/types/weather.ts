@@ -5,6 +5,7 @@ export interface UserProfile {
   role: string;
   latitude: number | null;
   longitude: number | null;
+  sap_alert_threshold_percent?: number | null;
   active: boolean;
   created_at: string;
   updated_at: string;

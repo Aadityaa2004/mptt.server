@@ -25,17 +25,17 @@ export function CurrentWeather({ weather }: CurrentWeatherProps) {
 
   return (
     <div className="select-none">
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-8 gap-y-3 sm:gap-y-2">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={iconUrl} alt={mainCondition.main} className="w-11 h-11" />
+          <img src={iconUrl} alt={mainCondition.main} className="w-10 h-10 sm:w-11 sm:h-11" />
           <div>
-            <div className="text-2xl font-light">{Math.round(celsiusToFahrenheit(weather.main.temp))}°F</div>
+            <div className="text-xl sm:text-2xl font-light">{Math.round(celsiusToFahrenheit(weather.main.temp))}°F</div>
             <p className="text-white/50 text-sm font-light capitalize">{weather.name} · {mainCondition.description}</p>
           </div>
         </div>
         <div className="h-6 w-px bg-white/10 hidden sm:block" />
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
           <div className="flex items-center gap-2">
             <Droplets className="h-4 w-4 text-white/40" />
             <span className="text-white/70 font-light">{weather.main.humidity}%</span>
@@ -57,7 +57,7 @@ export function CurrentWeather({ weather }: CurrentWeatherProps) {
           </div>
         </div>
         <div className="h-6 w-px bg-white/10 hidden md:block" />
-        <div className="flex items-center gap-6 text-sm text-white/50 font-light">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-6 text-xs sm:text-sm text-white/50 font-light">
           <span>H: {Math.round(celsiusToFahrenheit(weather.main.temp_max))}°</span>
           <span>L: {Math.round(celsiusToFahrenheit(weather.main.temp_min))}°</span>
           <span>Sunrise {formatTime(weather.sys.sunrise)}</span>

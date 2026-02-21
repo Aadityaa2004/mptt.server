@@ -195,11 +195,11 @@ export default function AdminDevicesPage() {
       : allDevices;
 
   return (
-    <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+    <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-light tracking-tight mb-2">
+            <h1 className="text-2xl sm:text-4xl font-light tracking-tight mb-2">
               {selectedPiForForm ? `Devices — PI: ${selectedPiForForm.pi_id}` : "Device Management"}
             </h1>
             <p className="text-white/60 font-light text-sm mt-1">

@@ -115,10 +115,10 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
 
   if (isLoading && readings.length === 0) {
     return (
-      <div className="p-12 flex items-center justify-center">
+      <div className="p-16 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 text-white/60 animate-spin" />
-          <p className="text-white/60 font-light">Loading readings...</p>
+          <Loader2 className="h-8 w-8 text-white/40 animate-spin" />
+          <p className="text-white/50 font-light text-sm">Loading readings...</p>
         </div>
       </div>
     );
@@ -126,12 +126,12 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
 
   if (error) {
     return (
-      <div className="p-12 text-center">
-        <p className="text-red-400 font-light mb-4">{error}</p>
+      <div className="p-16 text-center">
+        <p className="text-red-400 font-light mb-4 text-sm">{error}</p>
         <Button
           variant="outline"
           onClick={handleRefresh}
-          className="text-white border-white/20 hover:bg-white/10"
+          className="rounded-xl text-white border-white/10 hover:bg-white/5"
         >
           Retry
         </Button>
@@ -141,15 +141,15 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
 
   if (readings.length === 0) {
     return (
-      <div className="p-12 text-center">
-        <p className="text-white/60 font-light mb-2">No data shown yet</p>
-        <p className="text-white/40 font-light text-sm">
-          Readings will appear here once the sensor starts sending data
+      <div className="p-16 text-center">
+        <p className="text-white/60 font-light mb-2 text-sm">No data yet</p>
+        <p className="text-white/45 font-light text-sm mb-4">
+          Readings will appear once the sensor sends data
         </p>
         <Button
           variant="outline"
           onClick={handleRefresh}
-          className="mt-4 text-white border-white/20 hover:bg-white/10"
+          className="rounded-xl text-white border-white/10 hover:bg-white/5"
         >
           Refresh
         </Button>
@@ -162,23 +162,23 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/10">
-              <th className="px-6 py-3 text-left text-sm font-light text-white/60">Timestamp</th>
-              <th className="px-6 py-3 text-left text-sm font-light text-white/60">Temperature</th>
-              <th className="px-6 py-3 text-left text-sm font-light text-white/60">Sap Level</th>
-              <th className="px-6 py-3 text-left text-sm font-light text-white/60">Battery</th>
+            <tr className="border-b border-white/5">
+              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Timestamp</th>
+              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Temperature</th>
+              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Sap Level</th>
+              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Battery</th>
             </tr>
           </thead>
           <tbody>
             {readings.map((reading, idx) => (
               <tr
                 key={`${reading.ts}-${idx}`}
-                className="border-b border-white/10 hover:bg-white/5 transition-colors"
+                className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
               >
-                <td className="px-6 py-4 text-sm font-light">
+                <td className="px-6 py-3.5 text-sm font-light text-white/90">
                   {formatDate(reading.ts)}
                 </td>
-                <td className="px-6 py-4 text-sm font-light">
+                <td className="px-6 py-3.5 text-sm font-light text-white/80">
                   {reading.payload.sensors.temperature ? (
                     <div className="flex items-center gap-2">
                       <Thermometer className="h-4 w-4 text-white/40" />
@@ -195,7 +195,7 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
                     <span className="text-white/40">N/A</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm font-light">
+                <td className="px-6 py-3.5 text-sm font-light text-white/80">
                   {reading.payload.sensors.level ? (
                     <div className="flex items-center gap-2">
                       <Droplets className="h-4 w-4 text-white/40" />
@@ -207,7 +207,7 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
                     <span className="text-white/40">N/A</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm font-light">
+                <td className="px-6 py-3.5 text-sm font-light text-white/80">
                   <div className="flex items-center gap-2">
                     <Battery className="h-4 w-4 text-white/40" />
                     <span>{reading.payload.battery_percentage}%</span>
@@ -220,12 +220,12 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
       </div>
 
       {hasMore && (
-        <div className="px-6 py-4 border-t border-white/10 text-center">
+        <div className="px-6 py-4 border-t border-white/5 text-center">
           <Button
             variant="outline"
             onClick={handleLoadMore}
             disabled={isLoading}
-            className="text-white border-white/20 hover:bg-white/10"
+            className="rounded-xl text-white border-white/10 hover:bg-white/5"
           >
             {isLoading ? (
               <>

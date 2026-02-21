@@ -7,7 +7,7 @@ export default function TermsOfUsePage() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
-      <main className="px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+      <main className="px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-12 sm:pb-20">
         <div className="container mx-auto max-w-3xl space-y-8">
           <header>
             <h1 className="text-3xl sm:text-4xl font-light mb-3">Terms of Use</h1>

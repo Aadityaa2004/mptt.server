@@ -94,7 +94,7 @@ export default function AdminUserDetailPage() {
 
   if (loading && !user) {
     return (
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
         <div className="max-w-7xl mx-auto flex justify-center py-12">
           <Loader2 className="h-6 w-6 text-white/60 animate-spin" />
         </div>
@@ -104,7 +104,7 @@ export default function AdminUserDetailPage() {
 
   if (error && !user) {
     return (
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6 p-4 border border-red-500/20 bg-red-500/10 rounded-lg flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-400" />
@@ -119,7 +119,7 @@ export default function AdminUserDetailPage() {
   }
 
   return (
-    <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-16">
+    <main className="pt-16 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-start justify-between">
           <div>

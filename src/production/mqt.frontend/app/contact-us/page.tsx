@@ -8,7 +8,7 @@ export default function ContactUsPage() {
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <Navbar />
 
-      <main className="relative z-20 px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+      <main className="relative z-20 px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-12 sm:pb-20">
         <div className="container mx-auto max-w-4xl">
           <div className="relative mb-16 pt-12 pb-12 rounded-2xl overflow-hidden">
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">

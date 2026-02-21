@@ -15,7 +15,7 @@ export default function Home() {
       <main className="relative z-20  px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
           {/* Hero Section with DottedGlowBackground */}
-          <div className="relative mb-1 pt-32 pb-1 min-h-[55vh] rounded-2xl overflow-hidden">
+          <div className="relative mb-1 pt-20 sm:pt-28 lg:pt-32 pb-1 min-h-[50vh] sm:min-h-[55vh] rounded-2xl overflow-hidden">
             {/* Background Effects - Only for Hero Section */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
               <DottedGlowBackground
@@ -52,10 +52,10 @@ export default function Home() {
 
               {/* Main Headline */}
               <div className="text-center mb-6">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight mb-4">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight mb-4">
                   Introducing MapleSense
                 </h1>
-                <p className="text-lg sm:text-xl text-white/80 font-light max-w-2xl mx-auto">
+                <p className="text-base sm:text-lg lg:text-xl text-white/80 font-light max-w-2xl mx-auto px-0">
                   Optimize and simplify maple sap collection for small-scale and hobbyist producers using bucket and tap setups. Monitor sap levels remotely, track weather conditions, and receive intelligent collection recommendations—all from your web dashboard.
                 </p>
               </div>

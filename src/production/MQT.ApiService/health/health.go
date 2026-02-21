@@ -184,11 +184,12 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		CREATE INDEX IF NOT EXISTS idx_roles_name ON roles (name);
 	`
 
-	// Add bucket dimension columns to devices table (for existing databases)
+	// Add bucket dimension and collection_enabled columns to devices table (for existing databases)
 	alterDevicesTable := `
 		ALTER TABLE devices ADD COLUMN IF NOT EXISTS height DOUBLE PRECISION;
 		ALTER TABLE devices ADD COLUMN IF NOT EXISTS top_diameter DOUBLE PRECISION;
 		ALTER TABLE devices ADD COLUMN IF NOT EXISTS bottom_diameter DOUBLE PRECISION;
+		ALTER TABLE devices ADD COLUMN IF NOT EXISTS collection_enabled BOOLEAN DEFAULT true;
 	`
 
 	// Create verification_tokens table for OTP and password reset

@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navbar />
-        <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
+        <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 sm:py-16">
           <div className="w-full max-w-md text-center space-y-6">
             <h1 className="text-3xl sm:text-4xl font-light tracking-tight">Check your email</h1>
             <p className="text-white/60 font-light text-sm">
@@ -58,10 +58,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-16">
+      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-light tracking-tight mb-3">Forgot Password</h1>
+            <h1 className="text-2xl sm:text-4xl font-light tracking-tight mb-3">Forgot Password</h1>
             <p className="text-white/60 font-light text-sm">
               Enter your email and we&apos;ll send you a link to reset your password.
             </p>

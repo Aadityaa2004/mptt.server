@@ -42,6 +42,22 @@ export const weatherService = {
     }
   },
 
+  async updateProfile(updates: {
+    sap_alert_threshold_percent?: number | null;
+  }): Promise<UserProfile> {
+    const response = await apiFetch("/api/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to update profile" }));
+      throw new Error(error.message || "Failed to update profile");
+    }
+
+    return response.json();
+  },
+
   async updateLocation(location: LocationUpdateRequest): Promise<UserProfile> {
     const response = await apiFetch("/api/auth/location", {
       method: "PUT",

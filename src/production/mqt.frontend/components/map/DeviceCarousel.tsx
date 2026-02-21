@@ -163,14 +163,21 @@ export function DeviceCarousel({ devices, currentIndex, onClose, onNavigate, onD
                 </div>
               )}
               {latestReading.payload.sensors.level && (
-                <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5">
+                <div className="flex flex-col items-center gap-0.5 p-3 rounded-xl bg-white/5 border border-white/5">
                   <Droplets className="h-4 w-4 text-orange-400/80" />
-                  <span className="text-sm font-light text-white/90">
-                    {latestReading.payload.sensors.level.value.toFixed(1)}
-                  </span>
-                  <span className="text-[10px] font-light text-white/50">
-                    {latestReading.payload.sensors.level.unit}
-                  </span>
+                  {latestReading.fill_percentage != null ? (
+                    <span className="text-sm font-light text-white/90">{latestReading.fill_percentage.toFixed(0)}% fill</span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-light text-white/90">{latestReading.payload.sensors.level.value.toFixed(1)}</span>
+                      <span className="text-[10px] font-light text-white/50">{latestReading.payload.sensors.level.unit}</span>
+                    </>
+                  )}
+                  {currentDevice.height != null && (
+                    <span className="text-[10px] text-white/40 font-light">
+                      {Math.max(0, currentDevice.height - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm left
+                    </span>
+                  )}
                 </div>
               )}
               <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5">

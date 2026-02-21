@@ -154,17 +154,17 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
       {/* Temperature Chart */}
       {hasTemperature && (
-        <div className="border border-white/10 rounded-xl p-6 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-white/10 border border-white/20">
-              <Thermometer className="h-6 w-6 text-orange-400" />
+        <div className="rounded-2xl p-6 bg-white/[0.04] border border-white/5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-orange-500/20">
+              <Thermometer className="h-5 w-5 text-orange-400/90" />
             </div>
             <div>
-              <h3 className="text-xl font-light text-white">Temperature</h3>
-              <p className="text-xs text-white/50 font-light">Current measurement</p>
+              <h3 className="text-base font-light text-white/90">Temperature</h3>
+              <p className="text-xs text-white/50 font-light">Over time</p>
             </div>
           </div>
-          <div className="w-full h-[350px]">
+          <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 key={`temperature-${timeRange}`}
@@ -207,17 +207,17 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
 
       {/* Sap Level Chart */}
       {hasSapLevel && (
-        <div className="border border-white/10 rounded-xl p-6 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-white/10 border border-white/20">
-              <Droplets className="h-6 w-6 text-orange-400" />
+        <div className="rounded-2xl p-6 bg-white/[0.04] border border-white/5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-orange-500/20">
+              <Droplets className="h-5 w-5 text-orange-400/90" />
             </div>
             <div>
-              <h3 className="text-xl font-light text-white">Sap Level</h3>
-              <p className="text-xs text-white/50 font-light">Current measurement</p>
+              <h3 className="text-base font-light text-white/90">Sap Level</h3>
+              <p className="text-xs text-white/50 font-light">Over time</p>
             </div>
           </div>
-          <div className="w-full h-[350px]">
+          <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 key={`sapLevel-${timeRange}`}
@@ -260,17 +260,17 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
 
       {/* Battery Chart */}
       {hasBattery && (
-        <div className="border border-white/10 rounded-xl p-6 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-sm shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-white/10 border border-white/20">
-              <Battery className="h-6 w-6 text-orange-400" />
+        <div className="rounded-2xl p-6 bg-white/[0.04] border border-white/5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-orange-500/20">
+              <Battery className="h-5 w-5 text-orange-400/90" />
             </div>
             <div>
-              <h3 className="text-xl font-light text-white">Battery Level</h3>
-              <p className="text-xs text-white/50 font-light">Current charge</p>
+              <h3 className="text-base font-light text-white/90">Battery</h3>
+              <p className="text-xs text-white/50 font-light">Over time</p>
             </div>
           </div>
-          <div className="w-full h-[350px]">
+          <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 key={`battery-${timeRange}`}
