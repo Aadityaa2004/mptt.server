@@ -199,17 +199,17 @@ func (c *InternalController) checkAndSendAlert(piID, deviceID string, sensorDist
 
 	fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, sensorDistance)
 
+	// Look up the user who owns this device
+	user, err := c.userRepo.GetUserByDeviceID(context.Background(), deviceID)
+	if err != nil || user == nil {
+		return
+	}
+
 	threshold := float64(c.config.Alert.BucketThreshold)
 	if user.SapAlertThresholdPct != nil && *user.SapAlertThresholdPct >= 0 && *user.SapAlertThresholdPct <= 100 {
 		threshold = float64(*user.SapAlertThresholdPct)
 	}
 	if fillPct < threshold {
-		return
-	}
-
-	// Look up the user who owns this device
-	user, err := c.userRepo.GetUserByDeviceID(context.Background(), deviceID)
-	if err != nil || user == nil {
 		return
 	}
 
