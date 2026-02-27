@@ -2,21 +2,22 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/service"
 )
 
 // EmailHandler handles auth-related email sending (OTP, password reset)
 type EmailHandler struct {
-	emailService *service.EmailService
+	emailSender service.EmailSender
+	logger      *logger.Logger
 }
 
 // NewEmailHandler creates a new email handler
-func NewEmailHandler(emailService *service.EmailService) *EmailHandler {
-	return &EmailHandler{emailService: emailService}
+func NewEmailHandler(emailSender service.EmailSender, log *logger.Logger) *EmailHandler {
+	return &EmailHandler{emailSender: emailSender, logger: log}
 }
 
 // SendOTPRequest represents the request to send an OTP email
@@ -49,8 +50,8 @@ func (h *EmailHandler) SendOTP(c *gin.Context) {
 <p>— MapleSense</p>
 </body></html>`, req.OTP)
 
-	if err := h.emailService.SendHTML(req.To, subject, body); err != nil {
-		log.Printf("SendOTP: SMTP error for %s: %v", req.To, err)
+	if err := h.emailSender.SendHTML(req.To, subject, body); err != nil {
+		h.logger.ErrorWithError(err, "SendOTP: SMTP error for "+req.To)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send email: " + err.Error()})
 		return
 	}
@@ -91,8 +92,8 @@ func (h *EmailHandler) SendPasswordReset(c *gin.Context) {
 <p>— MapleSense</p>
 </body></html>`, userName, req.ResetLink, req.ResetLink)
 
-	if err := h.emailService.SendHTML(req.To, subject, body); err != nil {
-		log.Printf("SendPasswordReset: SMTP error for %s: %v", req.To, err)
+	if err := h.emailSender.SendHTML(req.To, subject, body); err != nil {
+		h.logger.ErrorWithError(err, "SendPasswordReset: SMTP error for "+req.To)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send email: " + err.Error()})
 		return
 	}

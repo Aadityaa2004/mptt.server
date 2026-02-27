@@ -5,19 +5,22 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	logger "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Logger"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/cooldown"
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.EmailService/service"
 )
 
 type AlertHandler struct {
-	emailService    *service.EmailService
+	emailSender     service.EmailSender
 	cooldownTracker *cooldown.Tracker
+	logger          *logger.Logger
 }
 
-func NewAlertHandler(emailService *service.EmailService, cooldownTracker *cooldown.Tracker) *AlertHandler {
+func NewAlertHandler(emailSender service.EmailSender, cooldownTracker *cooldown.Tracker, log *logger.Logger) *AlertHandler {
 	return &AlertHandler{
-		emailService:    emailService,
+		emailSender:     emailSender,
 		cooldownTracker: cooldownTracker,
+		logger:          log,
 	}
 }
 
@@ -59,7 +62,8 @@ func (h *AlertHandler) HandleBucketFillAlert(c *gin.Context) {
 <p>— MapleSense Alerts</p>
 </body></html>`, req.UserName, req.DeviceID, req.FillPercentage)
 
-	if err := h.emailService.SendHTML(req.UserEmail, subject, body); err != nil {
+	if err := h.emailSender.SendHTML(req.UserEmail, subject, body); err != nil {
+		h.logger.ErrorWithError(err, "HandleBucketFillAlert: failed to send email for "+req.UserEmail)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send email: " + err.Error()})
 		return
 	}

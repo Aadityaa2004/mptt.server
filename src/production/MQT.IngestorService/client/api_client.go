@@ -14,6 +14,18 @@ import (
 	hardware_models "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Models/hardware"
 )
 
+// APIReadingsClient defines the interface for API client operations (mockable for tests)
+type APIReadingsClient interface {
+	ValidatePi(ctx context.Context, piID string) (bool, error)
+	ValidateDevice(ctx context.Context, piID, deviceID string) (bool, error)
+	CreateReading(ctx context.Context, reading hardware_models.Reading) error
+	Health(ctx context.Context) error
+	GetCircuitBreakerStatus() map[string]interface{}
+}
+
+// Ensure APIClient implements APIReadingsClient
+var _ APIReadingsClient = (*APIClient)(nil)
+
 // CircuitBreakerState represents the state of the circuit breaker
 type CircuitBreakerState int
 

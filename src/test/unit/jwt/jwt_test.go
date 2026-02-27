@@ -56,3 +56,45 @@ func TestJWT_ValidateAccessToken_Invalid(t *testing.T) {
 		t.Error("expected error for invalid token")
 	}
 }
+
+func TestJWT_ValidateRefreshToken(t *testing.T) {
+	cfg := api_models.Config{
+		SecretKey:            "test-secret-key-at-least-32-chars",
+		AccessTokenDuration:  1 * time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+		Issuer:               "test-issuer",
+	}
+	svc := jwt.NewService(cfg)
+
+	pair, err := svc.GenerateTokens("user-456", "admin")
+	if err != nil {
+		t.Fatalf("GenerateTokens: %v", err)
+	}
+
+	claims, err := svc.ValidateRefreshToken(pair.RefreshToken)
+	if err != nil {
+		t.Fatalf("ValidateRefreshToken: %v", err)
+	}
+	if claims.UserID != "user-456" {
+		t.Errorf("claims.UserID = %q, want user-456", claims.UserID)
+	}
+	if claims.TokenID != pair.TokenID {
+		t.Errorf("claims.TokenID = %q, want %q", claims.TokenID, pair.TokenID)
+	}
+}
+
+func TestJWT_ValidateRefreshToken_Invalid(t *testing.T) {
+	cfg := api_models.Config{
+		SecretKey:            "test-secret-key-at-least-32-chars",
+		AccessTokenDuration:  1 * time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+		Issuer:               "test-issuer",
+	}
+	svc := jwt.NewService(cfg)
+
+	_, err := svc.ValidateRefreshToken("invalid.refresh.token")
+	if err == nil {
+		t.Error("expected error for invalid refresh token")
+	}
+}
+

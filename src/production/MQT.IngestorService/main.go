@@ -3,46 +3,35 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	container "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.Container"
+	"net/http"
+
 	"gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.IngestorService/client"
 	mqtingestor "gitlab.com/maplesense1/mpt.mqtt_server/src/production/MQT.IngestorService/ingestor"
 )
 
 func main() {
-	// Initialize dependency injection container
-	ctr, err := container.NewIngestorContainer()
+	// Use a bounded context for ingestor lifetime
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ing, cfg, apiClient, logger, shutdown, err := InitializeIngestorApp()
 	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize container: %v", err))
+		panic(fmt.Sprintf("Failed to initialize MQTT Ingestor Service: %v", err))
 	}
-	defer ctr.Shutdown(context.Background())
-
-	logger := ctr.GetLogger()
-	logger.Info("Starting MQTT Ingestor Service")
-
-	// Get configuration
-	config := ctr.GetConfig()
-
-	// Create API client
-	apiClient := client.NewAPIClient(config.ApiServiceURL, config.InternalAPISecret)
-
-	// Create MQTT ingestor configuration from environment
-	cfg := mqtingestor.LoadFromEnv()
+	defer shutdown(context.Background())
 
 	// Create and start MQTT ingestor
-	ing := mqtingestor.New(cfg, apiClient, logger)
-	if err := ing.Start(context.Background()); err != nil {
+	if err := ing.Start(ctx); err != nil {
 		logger.FatalWithError(err, "Failed to start MQTT ingestor")
 	}
-	defer ing.Stop()
 
 	// Start health check server
-	go startHealthServer(ctr, ing, apiClient)
+	go startHealthServer(cfg.Server.Port, logger, ing, apiClient)
 
 	logger.Info("MQTT ingestor running... press Ctrl+C to stop")
 
@@ -51,11 +40,11 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	logger.Info("Shutting down...")
+	logger.Info("Shutting down MQTT Ingestor Service...")
 }
 
 // startHealthServer starts a simple HTTP server for health checks
-func startHealthServer(ctr *container.IngestorContainer, ing *mqtingestor.Ingestor, apiClient *client.APIClient) {
+func startHealthServer(port string, logger mqtingestorLogger, ing *mqtingestor.Ingestor, apiClient client.APIReadingsClient) {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
@@ -103,11 +92,16 @@ func startHealthServer(ctr *container.IngestorContainer, ing *mqtingestor.Ingest
 			circuitBreakerStatus["state"], circuitBreakerStatus["failure_count"])
 	})
 
-	port := ctr.GetConfig().Server.Port
-	logger := ctr.GetLogger()
 	logger.Info("Health server starting on port " + port)
 
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		logger.FatalWithError(err, "Failed to start health server")
 	}
 }
+
+// mqtingestorLogger is the subset of logger.Logger used by startHealthServer.
+type mqtingestorLogger interface {
+	Info(msg string)
+	FatalWithError(err error, msg string)
+}
+

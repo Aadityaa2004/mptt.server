@@ -1,0 +1,25 @@
+# Gitleaks config: detect secrets before push
+# https://github.com/gitleaks/gitleaks
+
+title = "MPTT Server - Secret Detection"
+
+[extend]
+# Use default rules
+useDefault = true
+
+[allowlist]
+description = "Allow test fixtures and example placeholders"
+paths = [
+  '''.*_test\.go$''',
+  '''.*\.example\.''',
+  '''.*testutil.*''',
+  '''env\.production\.example''',
+  '''\.env\.example''',
+]
+regexes = [
+  '''test-secret''',
+  '''test-internal-secret''',
+  '''change-this-secret''',
+  '''dummy|fake|placeholder''',
+]
+commits = []

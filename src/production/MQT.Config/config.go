@@ -152,6 +152,14 @@ type IngestorConfig struct {
 	InternalAPISecret string        `json:"internal_api_secret"`
 }
 
+// EmailServiceConfig holds configuration for the Email service
+type EmailServiceConfig struct {
+	Server  ServerConfig  `json:"server"`
+	Logging LoggingConfig `json:"logging"`
+	Email   EmailConfig   `json:"email"`
+	Alert   AlertConfig   `json:"alert"`
+}
+
 // LoadIngestorConfig loads configuration for the MQTT Ingestor service
 func LoadIngestorConfig() (*IngestorConfig, error) {
 	// Try to load .env file, but don't fail if it doesn't exist
@@ -196,6 +204,44 @@ func LoadIngestorConfig() (*IngestorConfig, error) {
 	}
 	if config.InternalAPISecret == "" {
 		return nil, fmt.Errorf("INTERNAL_API_SECRET is required")
+	}
+
+	return config, nil
+}
+
+// LoadEmailConfig loads configuration for the Email service
+func LoadEmailConfig() (*EmailServiceConfig, error) {
+	if err := godotenv.Load(); err != nil {
+		// Silently ignore .env file loading errors
+	}
+
+	config := &EmailServiceConfig{
+		Server: ServerConfig{
+			Port:         getEnv("PORT", "9004"),
+			ReadTimeout:  getDuration("READ_TIMEOUT", 30*time.Second),
+			WriteTimeout: getDuration("WRITE_TIMEOUT", 30*time.Second),
+			IdleTimeout:  getDuration("IDLE_TIMEOUT", 120*time.Second),
+		},
+		Logging: LoggingConfig{
+			Level:        getEnv("LOG_LEVEL", "info"),
+			Format:       getEnv("LOG_FORMAT", "text"),
+			Output:       getEnv("LOG_OUTPUT", "stdout"),
+			EnableCaller: getBool("LOG_ENABLE_CALLER", false),
+		},
+		Email: EmailConfig{
+			SMTPHost:       getEnv("SMTP_HOST", "smtp-relay.brevo.com"),
+			SMTPPort:       getInt("SMTP_PORT", 587),
+			SMTPEncryption: getEnv("SMTP_ENCRYPTION", "starttls"),
+			SMTPUsername:   getEnv("SMTP_USERNAME", ""),
+			SMTPPassword:   getEnv("SMTP_PASSWORD", ""),
+			FromName:       getEnv("EMAIL_FROM_NAME", "MapleSense Alerts"),
+			FromAddress:    getEnv("EMAIL_FROM_ADDRESS", ""),
+		},
+		Alert: AlertConfig{
+			BucketThreshold: getInt("ALERT_BUCKET_THRESHOLD", 75),
+			ResetThreshold:  getInt("ALERT_RESET_THRESHOLD", 70),
+			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
+		},
 	}
 
 	return config, nil

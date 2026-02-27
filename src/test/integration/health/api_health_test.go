@@ -44,3 +44,4 @@ func TestAPI_HealthReady(t *testing.T) {
 		t.Errorf("GET /health/ready: status %d, want 200", resp.StatusCode)
 	}
 }
+

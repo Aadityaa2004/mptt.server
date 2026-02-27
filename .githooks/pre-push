@@ -1,0 +1,140 @@
+#!/bin/sh
+# Pre-push hook: run build, tests, lint, and security checks before allowing push.
+# Install with: make install-hooks  OR  git config core.hooksPath .githooks
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo ""
+echo "=============================================="
+echo "  Pre-push checks (build, tests, lint, security)"
+echo "=============================================="
+echo ""
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# 1. Go build
+echo ">>> Running: go build ./..."
+if ! go build ./...; then
+  echo "${RED}FAIL: Build failed${NC}"
+  exit 1
+fi
+echo "${GREEN}OK: Build passed${NC}"
+echo ""
+
+# 2. Go unit tests
+echo ">>> Running: go test (unit tests)"
+if ! go test ./src/test/unit/... ./src/test/testutil/... ./src/production/... -count=1; then
+  echo "${RED}FAIL: Unit tests failed${NC}"
+  exit 1
+fi
+echo "${GREEN}OK: Unit tests passed${NC}"
+echo ""
+
+# 3. Go vet
+echo ">>> Running: go vet ./..."
+if ! go vet ./...; then
+  echo "${RED}FAIL: go vet failed${NC}"
+  exit 1
+fi
+echo "${GREEN}OK: go vet passed${NC}"
+echo ""
+
+# 4. golangci-lint (optional but recommended)
+echo ">>> Running: golangci-lint"
+if command -v golangci-lint >/dev/null 2>&1; then
+  if ! golangci-lint run ./...; then
+    echo "${RED}FAIL: golangci-lint failed${NC}"
+    exit 1
+  fi
+  echo "${GREEN}OK: golangci-lint passed${NC}"
+else
+  echo "${YELLOW}SKIP: golangci-lint not installed (run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)${NC}"
+fi
+echo ""
+
+# 5. govulncheck (vulnerability scan)
+echo ">>> Running: govulncheck"
+if command -v govulncheck >/dev/null 2>&1; then
+  if ! govulncheck ./...; then
+    echo "${RED}FAIL: govulncheck found vulnerabilities${NC}"
+    exit 1
+  fi
+  echo "${GREEN}OK: govulncheck passed${NC}"
+else
+  echo ">>> Installing govulncheck..."
+  if go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null; then
+    if ! govulncheck ./...; then
+      echo "${RED}FAIL: govulncheck found vulnerabilities${NC}"
+      exit 1
+    fi
+    echo "${GREEN}OK: govulncheck passed${NC}"
+  else
+    echo "${YELLOW}SKIP: govulncheck not available${NC}"
+  fi
+fi
+echo ""
+
+# 6. Secret / leak detection
+echo ">>> Running: Secret scan (gitleaks)"
+if command -v gitleaks >/dev/null 2>&1; then
+  if [ -f .gitleaks.toml ]; then
+    if ! gitleaks detect --no-git --source . --verbose 2>/dev/null; then
+      echo "${RED}FAIL: gitleaks detected potential secrets${NC}"
+      exit 1
+    fi
+  else
+    if ! gitleaks detect --no-git --source . 2>/dev/null; then
+      echo "${RED}FAIL: gitleaks detected potential secrets${NC}"
+      exit 1
+    fi
+  fi
+  echo "${GREEN}OK: No secrets detected${NC}"
+else
+  echo "${YELLOW}SKIP: gitleaks not installed (recommended: https://github.com/gitleaks/gitleaks)${NC}"
+  echo "      Running basic leak pattern check..."
+  LEAKS=$(grep -r -E -l --include='*.go' --include='*.py' --include='*.ts' --include='*.tsx' --include='*.js' \
+      -e 'AKIA[0-9A-Z]{16}' \
+      -e 'sk_live_[0-9a-zA-Z]{24,}' \
+      -e 'ghp_[0-9a-zA-Z]{36}' \
+      -e 'xox[baprs]-[0-9a-zA-Z]{10,48}' \
+      src/ 2>/dev/null | grep -v _test\.go | grep -v '.example.' || true)
+  if [ -n "$LEAKS" ]; then
+    echo "${RED}FAIL: Possible hardcoded secrets detected in:${NC}"
+    echo "$LEAKS"
+    exit 1
+  fi
+  echo "${GREEN}OK: Basic leak check passed${NC}"
+fi
+echo ""
+
+# 7. Bridge (Python) tests
+echo ">>> Running: Bridge unit tests"
+if [ -d "src/production/MQT.Bridge" ] && [ -d "src/production/MQT.Bridge/tests/unit" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if (cd src/production/MQT.Bridge && \
+        (pip3 install -q -r requirements.txt 2>/dev/null || true) && \
+        PYTHONPATH=./vendor:${PYTHONPATH:-} python3 -m unittest discover -s tests/unit -v); then
+      echo "${GREEN}OK: Bridge tests passed${NC}"
+    else
+      echo "${RED}FAIL: Bridge unit tests failed${NC}"
+      exit 1
+    fi
+  else
+    echo "${YELLOW}SKIP: python3 not found${NC}"
+  fi
+else
+  echo "${YELLOW}SKIP: Bridge unit tests not found${NC}"
+fi
+echo ""
+
+echo "=============================================="
+echo "${GREEN}  All pre-push checks passed. Proceeding with push.${NC}"
+echo "=============================================="
+echo ""
+exit 0

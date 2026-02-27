@@ -74,6 +74,24 @@ See `src/test/acceptance/` for high-level flow tests. These typically require th
 Install golangci-lint for Go:  
 `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
 
+## Pre-push Hook (recommended)
+
+To block pushes that would fail CI, install the pre-push hook:
+
+```bash
+make install-hooks
+```
+
+This configures Git to run before every push:
+
+- **Build** – `go build ./...`
+- **Tests** – Go unit tests + Bridge Python tests
+- **Lint** – `go vet` and `golangci-lint` (if installed)
+- **Security** – `govulncheck` (vulnerability scan)
+- **Secret scan** – `gitleaks` or a basic pattern check
+
+The push is aborted if any check fails. Optional tools (golangci-lint, govulncheck, gitleaks) will skip with a warning if not installed; install them for full coverage.
+
 ## Submitting Changes
 
 1. Create a branch from `main` (or the default branch).
@@ -90,4 +108,4 @@ Install golangci-lint for Go:
 
 ## Makefile Reference
 
-Run `make help` for a list of targets. Main ones: `build`, `test`, `test-unit`, `test-integration`, `test-frontend`, `lint`, `lint-go`, `lint-frontend`, `clean`.
+Run `make help` for a list of targets. Main ones: `build`, `test`, `test-unit`, `coverage`, `test-integration`, `test-frontend`, `lint`, `install-hooks`, `pre-push`, `clean`.

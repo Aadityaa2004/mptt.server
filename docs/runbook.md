@@ -22,6 +22,15 @@ Use these for load balancers, Kubernetes probes, or manual checks.
 - **Ingestor not receiving data:** Verify MQTT Bridge and Mosquitto are running; check topic filter (`MQTT_TOPIC`) and broker credentials.
 - **High memory/CPU on RPi:** Limit container resources in `docker-compose` and monitor with `docker stats`.
 
+## Testing layout
+
+- **Go tests in production:** Go unit tests remain co-located with their packages under `src/production/...` so they can exercise unexported internals.
+- **Central test tree:** Cross-cutting Go tests and higher-level flows live under `src/test`:
+  - `src/test/unit/...` for Go unit tests that sit outside production packages (e.g. JWT service), grouped by topic (`jwt`, `bridge`, etc.).
+  - `src/test/integration/...` for Go integration tests with the `integration` build tag, grouped by topic (`auth`, `email`, `internal`, `health`, etc.).
+  - `src/test/acceptance/...` for Go acceptance/E2E tests with the `acceptance` build tag, grouped by flow (`e2e`, etc.).
+- **Bridge (Python) tests:** Python unit tests for the MQTT Bridge live under `src/test/unit/bridge` and are run via `make test-bridge` or the CI bridge job.
+
 ## Escalation
 
 For security or data issues, follow [SECURITY.md](../SECURITY.md). For deployment rollback, see [RPI_DEPLOYMENT_STEPS.md](../RPI_DEPLOYMENT_STEPS.md).

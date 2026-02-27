@@ -66,3 +66,6 @@ temp/
 
 # venv
 myenv/
+
+# Python vendor (Bridge)
+src/production/MQT.Bridge/vendor/

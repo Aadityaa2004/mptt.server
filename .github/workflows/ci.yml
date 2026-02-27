@@ -31,7 +31,7 @@ jobs:
         run: go vet ./...
 
       - name: Run unit tests
-        run: go test ./src/test/unit/... -count=1 -v
+        run: go test ./src/test/unit/... ./src/test/testutil/... ./src/production/... -count=1 -v
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -67,6 +67,27 @@ jobs:
 
       - name: npm audit
         run: cd src/production/mqt.frontend && npm audit --audit-level=high || true
+
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Bridge dependencies
+        run: |
+          cd src/production/MQT.Bridge
+          pip install -r requirements.txt
+          pip install --target ./vendor paho-mqtt
+
+      - name: Run Bridge unit tests
+        run: |
+          cd ${{ github.workspace }}
+          PYTHONPATH=./src/production/MQT.Bridge/vendor:$PYTHONPATH python -m unittest src.test.unit.bridge.test_mqtt_bridge -v
 
   trivy:
     runs-on: ubuntu-latest

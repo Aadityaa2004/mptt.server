@@ -124,7 +124,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*Regis
 // Login authenticates a user and returns tokens
 func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*AuthResponse, *api_models.TokenPair, error) {
 	user, err := s.userRepo.GetByUsername(ctx, req.Username)
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, nil, errors.New("invalid credentials")
 	}
 	if !user.Active {
