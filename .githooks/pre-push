@@ -60,23 +60,25 @@ echo ""
 
 # 5. govulncheck (vulnerability scan)
 echo ">>> Running: govulncheck"
+GOVULNCHECK=""
 if command -v govulncheck >/dev/null 2>&1; then
-  if ! govulncheck ./...; then
+  GOVULNCHECK="govulncheck"
+elif [ -x "$(go env GOPATH)/bin/govulncheck" ]; then
+  GOVULNCHECK="$(go env GOPATH)/bin/govulncheck"
+else
+  echo ">>> Installing govulncheck..."
+  if go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null; then
+    GOVULNCHECK="$(go env GOPATH)/bin/govulncheck"
+  fi
+fi
+if [ -n "$GOVULNCHECK" ]; then
+  if ! $GOVULNCHECK ./...; then
     echo "${RED}FAIL: govulncheck found vulnerabilities${NC}"
     exit 1
   fi
   echo "${GREEN}OK: govulncheck passed${NC}"
 else
-  echo ">>> Installing govulncheck..."
-  if go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null; then
-    if ! govulncheck ./...; then
-      echo "${RED}FAIL: govulncheck found vulnerabilities${NC}"
-      exit 1
-    fi
-    echo "${GREEN}OK: govulncheck passed${NC}"
-  else
-    echo "${YELLOW}SKIP: govulncheck not available${NC}"
-  fi
+  echo "${YELLOW}SKIP: govulncheck not available${NC}"
 fi
 echo ""
 
