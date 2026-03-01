@@ -2,7 +2,6 @@
 
 import Navbar from "@/components/navbar/Navbar";
 import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
-import { GraduationCap, Users, Target } from "lucide-react";
 
 export default function AboutUsPage() {
   const teamMembers = [
