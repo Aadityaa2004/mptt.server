@@ -1,15 +1,24 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import { DeviceCarousel } from "./DeviceCarousel"
+import type { Device } from "@/types/device"
 
 vi.mock("@/services/api/sensorService", () => ({
   sensorService: { getLatestDeviceReading: vi.fn().mockResolvedValue(null) },
 }))
 vi.mock("@/services/api/deviceLocationService", () => ({
-  deviceLocationService: { deleteDeviceLocation: vi.fn().mockResolvedValue(undefined) },
+  deviceLocationService: { deleteLocation: vi.fn().mockResolvedValue(undefined) },
 }))
 
-const mockDevice = { id: "1", pi_id: "pi-1", device_id: "dev-1", latitude: 0, longitude: 0 } as any
+const mockDevice: Device = {
+  id: "1",
+  pi_id: "pi-1",
+  device_id: "dev-1",
+  latitude: 0,
+  longitude: 0,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}
 
 describe("DeviceCarousel", () => {
   it("renders device heading and content", () => {

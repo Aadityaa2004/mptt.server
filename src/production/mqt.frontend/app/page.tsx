@@ -134,7 +134,7 @@ export default function Home() {
               <div className="p-6 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm">
                 <h3 className="text-xl font-light mb-3">For Small-Scale Producers</h3>
                 <p className="text-white/60 font-light leading-relaxed">
-                  While commercial operations use expensive vacuum tubing systems, small-scale and hobbyist producers rely on traditional bucket setups. Existing monitoring solutions cost thousands of dollars and aren't designed for bucket-based collection.
+                  While commercial operations use expensive vacuum tubing systems, small-scale and hobbyist producers rely on traditional bucket setups. Existing monitoring solutions cost thousands of dollars and aren&apos;t designed for bucket-based collection.
                 </p>
               </div>
               <div className="p-6 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm">

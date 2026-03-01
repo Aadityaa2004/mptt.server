@@ -17,7 +17,12 @@ vi.mock("@/services/api/weatherService", () => ({
 vi.mock("@/services/api/deviceLocationService", () => ({
   deviceLocationService: {
     getAllLocations: vi.fn().mockResolvedValue([]),
-    convertToDevice: vi.fn((l: any, id: string) => ({ id, ...l })),
+    convertToDevice: vi.fn(
+      (
+        l: { device_id: string; pi_id: string; latitude: number; longitude: number },
+        id: string
+      ) => ({ id, ...l })
+    ),
   },
 }))
 
