@@ -16,16 +16,79 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
+import type { TooltipProps } from "recharts";
 import { Calendar, Droplet, CloudRain, Snowflake, Thermometer } from "lucide-react";
 
 interface WeatherForecastProps {
   forecast: WeatherForecastType;
 }
 
+interface ChartDataPoint {
+  time: string;
+  day: string;
+  date: string;
+  hour: number;
+  temp: number;
+  tempMax: number;
+  tempMin: number;
+  humidity: number;
+  pop: number;
+  rain: number;
+  snow: number;
+  windSpeed: number;
+  icon: string;
+  description: string;
+}
+
 // Convert Celsius to Fahrenheit
 const celsiusToFahrenheit = (celsius: number): number => {
   return (celsius * 9) / 5 + 32;
 };
+
+function TempTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as ChartDataPoint;
+    return (
+      <div className="bg-black/90 border border-orange-500/30 rounded-lg p-3 shadow-lg min-w-[160px]">
+        <p className="text-white/80 text-xs mb-2 font-medium">{data.time}</p>
+        <p className="text-orange-300 font-light text-lg">
+          {data.temp}°F
+        </p>
+        <p className="text-white/60 text-xs mt-1">
+          {data.tempMax}°F / {data.tempMin}°F
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
+function PrecipitationTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as ChartDataPoint;
+    return (
+      <div className="bg-black/90 border border-blue-500/30 rounded-lg p-3 shadow-lg min-w-[180px]">
+        <p className="text-white/80 text-xs mb-2 font-medium">{data.time}</p>
+        <div className="space-y-1 text-xs">
+          <p className="text-white/70">
+            <span className="text-blue-300">Humidity:</span> {data.humidity}%
+          </p>
+          {data.rain > 0 && (
+            <p className="text-white/70">
+              <span className="text-blue-400">Rainfall:</span> {data.rain.toFixed(1)} mm
+            </p>
+          )}
+          {data.snow > 0 && (
+            <p className="text-white/70">
+              <span className="text-cyan-200">Snowfall:</span> {data.snow.toFixed(1)} mm
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
 
 export function WeatherForecast({ forecast }: WeatherForecastProps) {
   const [selectedDays, setSelectedDays] = useState<number>(5);
@@ -80,51 +143,6 @@ export function WeatherForecast({ forecast }: WeatherForecastProps) {
       snow: Math.round(totalSnow * 10) / 10,
     };
   }, [chartData]);
-
-  const TempTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-black/90 border border-orange-500/30 rounded-lg p-3 shadow-lg min-w-[160px]">
-          <p className="text-white/80 text-xs mb-2 font-medium">{data.time}</p>
-          <p className="text-orange-300 font-light text-lg">
-            {data.temp}°F
-          </p>
-          <p className="text-white/60 text-xs mt-1">
-            {data.tempMax}°F / {data.tempMin}°F
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const PrecipitationTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-black/90 border border-blue-500/30 rounded-lg p-3 shadow-lg min-w-[180px]">
-          <p className="text-white/80 text-xs mb-2 font-medium">{data.time}</p>
-          <div className="space-y-1 text-xs">
-            <p className="text-white/70">
-              <span className="text-blue-300">Humidity:</span> {data.humidity}%
-            </p>
-            {data.rain > 0 && (
-              <p className="text-white/70">
-                <span className="text-blue-400">Rainfall:</span> {data.rain.toFixed(1)} mm
-              </p>
-            )}
-            {data.snow > 0 && (
-              <p className="text-white/70">
-                <span className="text-cyan-200">Snowfall:</span> {data.snow.toFixed(1)} mm
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-6 select-none">

@@ -31,12 +31,12 @@ describe("DeviceCarousel", () => {
       />
     )
     expect(
-      screen.getByRole("heading", { name: /device/i }),
-      "DeviceCarousel should display Device heading"
-    ).toBeInTheDocument()
-    expect(
       screen.getByText("dev-1"),
       "DeviceCarousel should display device_id"
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/pi-1/),
+      "DeviceCarousel should display pi_id"
     ).toBeInTheDocument()
   })
 })

@@ -7,6 +7,53 @@ import { LogOut, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface NavLinksProps {
+  isAuthenticated: boolean;
+  user: { username?: string; role?: string } | null;
+  onLinkClick: () => void;
+}
+
+function NavLinks({ isAuthenticated, user, onLinkClick }: NavLinksProps) {
+  return (
+    <>
+      {isAuthenticated ? (
+        <>
+          <Link
+            href={user?.role === "admin" ? "/admin/overview" : "/user/dashboard"}
+            className="text-foreground/90 hover:text-foreground transition-colors"
+            onClick={onLinkClick}
+          >
+            {user?.role === "admin" ? "Overview" : "Dashboard"}
+          </Link>
+          {user?.role === "admin" && (
+            <>
+              <Link href="/admin/users" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Users</Link>
+              <Link href="/admin/pis" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>PIs</Link>
+              <Link href="/admin/devices" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Devices</Link>
+              <Link href="/admin/readings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Readings</Link>
+              <Link href="/admin/settings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Settings</Link>
+            </>
+          )}
+          {user?.role === "user" && (
+            <>
+              <Link href="/user/forecast" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Forecast</Link>
+              <Link href="/user/sensors" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>My Sensors</Link>
+              <Link href="/user/settings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Settings</Link>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <Link href="/" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Home</Link>
+          <Link href="/about-us" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>About Us</Link>
+          <Link href="/contact-us" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Contact Us</Link>
+          <Link href="/products" className="text-foreground/90 hover:text-foreground transition-colors" onClick={onLinkClick}>Products</Link>
+        </>
+      )}
+    </>
+  );
+}
+
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,44 +63,7 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   };
 
-  const NavLinks = () => (
-    <>
-      {isAuthenticated ? (
-        <>
-          <Link
-            href={user?.role === "admin" ? "/admin/overview" : "/user/dashboard"}
-            className="text-foreground/90 hover:text-foreground transition-colors"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            {user?.role === "admin" ? "Overview" : "Dashboard"}
-          </Link>
-          {user?.role === "admin" && (
-            <>
-              <Link href="/admin/users" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Users</Link>
-              <Link href="/admin/pis" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>PIs</Link>
-              <Link href="/admin/devices" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Devices</Link>
-              <Link href="/admin/readings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Readings</Link>
-              <Link href="/admin/settings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
-            </>
-          )}
-          {user?.role === "user" && (
-            <>
-              <Link href="/user/forecast" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Forecast</Link>
-              <Link href="/user/sensors" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>My Sensors</Link>
-              <Link href="/user/settings" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          <Link href="/" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Home</Link>
-          <Link href="/about-us" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
-          <Link href="/contact-us" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Contact Us</Link>
-          <Link href="/products" className="text-foreground/90 hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>Products</Link>
-        </>
-      )}
-    </>
-  );
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <>
@@ -85,7 +95,7 @@ export default function Navbar() {
 
             {/* Desktop Navigation - centered */}
             <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2 text-sm font-light">
-              <NavLinks />
+              <NavLinks isAuthenticated={isAuthenticated} user={user} onLinkClick={closeMobileMenu} />
             </div>
 
           {/* Right Side Actions */}
@@ -154,7 +164,7 @@ export default function Navbar() {
       >
         <div className="flex flex-col h-full pt-24 px-4 pb-6">
           <div className="flex flex-col [&_a]:block [&_a]:py-3 [&_a]:px-3 [&_a]:rounded-lg [&_a]:text-base [&_a]:font-light [&_a]:hover:bg-white/5">
-            <NavLinks />
+            <NavLinks isAuthenticated={isAuthenticated} user={user} onLinkClick={closeMobileMenu} />
           </div>
           {isAuthenticated && (
             <div className="mt-auto pt-4 border-t border-white/10">

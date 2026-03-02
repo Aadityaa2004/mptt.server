@@ -7,7 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS='--max-old-space-size=8192' vitest run",
     "test:verbose": "VITEST_VERBOSE=1 vitest run --reporter=verbose",
     "test:ci": "NODE_OPTIONS='--max-old-space-size=4096' vitest run --reporter=verbose --no-file-parallelism"
   },

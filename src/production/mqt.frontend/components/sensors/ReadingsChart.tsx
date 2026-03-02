@@ -22,78 +22,70 @@ interface CustomTooltipPayloadEntry {
   value: number | null;
 }
 
-interface CustomTooltipProps {
+interface ReadingsChartTooltipProps {
   active?: boolean;
   payload?: CustomTooltipPayloadEntry[];
   label?: string;
   unit: string;
 }
 
+// Format time label based on the time range
+function formatTimeLabel(timestamp: string, range: "1h" | "1d" | "1w" | "1m" | "1y") {
+  const date = new Date(timestamp);
+  switch (range) {
+    case "1h":
+      return date.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit" });
+    case "1d":
+      return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    case "1w":
+      return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit" });
+    case "1m":
+      return date.toLocaleString("en-US", { month: "short", day: "numeric" });
+    case "1y":
+      return date.toLocaleString("en-US", { month: "short", year: "numeric" });
+    default:
+      return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+}
+
+function getCutoffTime(latestTimestamp: number, timeRange: "1h" | "1d" | "1w" | "1m" | "1y") {
+  switch (timeRange) {
+    case "1h":
+      return latestTimestamp - 60 * 60 * 1000;
+    case "1d":
+      return latestTimestamp - 24 * 60 * 60 * 1000;
+    case "1w":
+      return latestTimestamp - 7 * 24 * 60 * 60 * 1000;
+    case "1m":
+      return latestTimestamp - 30 * 24 * 60 * 60 * 1000;
+    case "1y":
+      return latestTimestamp - 365 * 24 * 60 * 60 * 1000;
+    default:
+      return latestTimestamp;
+  }
+}
+
+function ReadingsChartTooltip({ active, payload, label, unit }: ReadingsChartTooltipProps) {
+  if (!active || !payload || !payload.length) {
+    return null;
+  }
+
+  const value = payload[0].value;
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="bg-black/95 border border-orange-500/30 rounded-lg p-3 shadow-xl shadow-orange-500/20">
+      <p className="text-white/70 text-xs mb-2 font-light">{label}</p>
+      <p className="text-base font-light text-orange-400">
+        {`${value.toFixed(1)}${unit}`}
+      </p>
+    </div>
+  );
+}
+
 export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
-  // Calculate the cutoff time based on the selected range
-  // Use the most recent timestamp in the dataset as the reference point
-  const getCutoffTime = (latestTimestamp: number) => {
-    const cutoff = latestTimestamp;
-    
-    switch (timeRange) {
-      case "1h":
-        return cutoff - 60 * 60 * 1000; // 1 hour ago
-      case "1d":
-        return cutoff - 24 * 60 * 60 * 1000; // 1 day ago
-      case "1w":
-        return cutoff - 7 * 24 * 60 * 60 * 1000; // 7 days ago
-      case "1m":
-        return cutoff - 30 * 24 * 60 * 60 * 1000; // 30 days ago
-      case "1y":
-        return cutoff - 365 * 24 * 60 * 60 * 1000; // 365 days ago
-      default:
-        return cutoff;
-    }
-  };
-
-  // Format time label based on the time range
-  const formatTimeLabel = (timestamp: string, range: "1h" | "1d" | "1w" | "1m" | "1y") => {
-    const date = new Date(timestamp);
-    
-    switch (range) {
-      case "1h":
-        return date.toLocaleString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      case "1d":
-        return date.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      case "1w":
-        return date.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-        });
-      case "1m":
-        return date.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
-      case "1y":
-        return date.toLocaleString("en-US", {
-          month: "short",
-          year: "numeric",
-        });
-      default:
-        return date.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-    }
-  };
-
   const chartData = useMemo(() => {
     if (readings.length === 0) {
       return [];
@@ -104,7 +96,7 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
     const latestTimestamp = Math.max(...timestamps);
     
     // Calculate cutoff time based on the latest timestamp
-    const cutoffTimestamp = getCutoffTime(latestTimestamp);
+    const cutoffTimestamp = getCutoffTime(latestTimestamp, timeRange);
     
     const filtered = readings
       .filter((reading) => {
@@ -129,27 +121,6 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
     
     return filtered;
   }, [readings, timeRange]);
-
-  const CustomTooltip = ({ active, payload, label, unit }: CustomTooltipProps) => {
-    if (!active || !payload || !payload.length) {
-      return null;
-    }
-
-    const value = payload[0].value;
-    if (value === null || value === undefined) {
-      return null;
-    }
-
-      return (
-        <div className="bg-black/95 border border-orange-500/30 rounded-lg p-3 shadow-xl shadow-orange-500/20">
-          <p className="text-white/70 text-xs mb-2 font-light">{label}</p>
-          <p className="text-base font-light text-orange-400">
-            {`${value.toFixed(1)}${unit}`}
-          </p>
-        </div>
-      );
-    };
-  };
 
   if (readings.length === 0) {
     return null;
@@ -205,7 +176,7 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
                   label={{ value: "°C", angle: -90, position: "insideLeft", style: { fill: "#ffffff70", fontSize: "12px" } }}
                 />
                 <Tooltip 
-                  content={<CustomTooltip unit="°C" />}
+                  content={<ReadingsChartTooltip unit="°C" />}
                   cursor={{ stroke: "#f97316", strokeWidth: 1, strokeDasharray: "5 5" }}
                 />
                 <Line
@@ -258,7 +229,7 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
                   label={{ value: "cm", angle: -90, position: "insideLeft", style: { fill: "#ffffff70", fontSize: "12px" } }}
                 />
                 <Tooltip 
-                  content={<CustomTooltip unit=" cm" />}
+                  content={<ReadingsChartTooltip unit=" cm" />}
                   cursor={{ stroke: "#f97316", strokeWidth: 1, strokeDasharray: "5 5" }}
                 />
                 <Line
@@ -311,7 +282,7 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
                   label={{ value: "%", angle: -90, position: "insideLeft", style: { fill: "#ffffff70", fontSize: "12px" } }}
                 />
                 <Tooltip 
-                  content={<CustomTooltip unit="%" />}
+                  content={<ReadingsChartTooltip unit="%" />}
                   cursor={{ stroke: "#ea580c", strokeWidth: 1, strokeDasharray: "5 5" }}
                 />
                 <Line

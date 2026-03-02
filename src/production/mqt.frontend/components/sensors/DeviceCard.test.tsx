@@ -5,6 +5,7 @@ import { DeviceCard } from "./DeviceCard"
 vi.mock("@/services/api/sensorService", () => ({
   sensorService: {
     getLatestDeviceReading: vi.fn().mockResolvedValue(null),
+    getDevice: vi.fn().mockResolvedValue({ collection_enabled: true }),
   },
 }))
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { deviceLocationService } from "@/services/api/deviceLocationService";
-import { tailwindToHex, hexToTailwind, getMostCommonColor } from "@/lib/colorUtils";
+import { tailwindToHex, getMostCommonColor } from "@/lib/colorUtils";
 
 export interface PiPreference {
   pi_id: string;
@@ -46,23 +46,24 @@ export function usePiPreferences() {
         const parsed = JSON.parse(stored);
         // Validate and clean preferences (ensure no null/undefined colors)
         const cleaned: Record<string, PiPreference> = {};
-        Object.entries(parsed).forEach(([pi_id, pref]: [string, any]) => {
-          if (pref && typeof pref === 'object') {
+        Object.entries(parsed).forEach(([pi_id, pref]: [string, unknown]) => {
+          const p = pref as { color?: string; gradient?: string } | null | undefined;
+          if (p && typeof p === 'object') {
             let color: string;
             
             // Handle migration from old gradient format to new color format
-            if (pref.color) {
+            if (p.color) {
               // Already in new format
-              color = pref.color;
-            } else if (pref.gradient) {
+              color = p.color;
+            } else if (p.gradient) {
               // Migrate from gradient format
               // Check for custom hex colors first: from-[#f97316]
-              const hexFromMatch = pref.gradient.match(/from-\[#([0-9A-Fa-f]{6})\]/);
+              const hexFromMatch = p.gradient.match(/from-\[#([0-9A-Fa-f]{6})\]/);
               if (hexFromMatch) {
                 color = `#${hexFromMatch[1]}`;
               } else {
                 // Try Tailwind class: from-orange-500
-                const fromMatch = pref.gradient.match(/from-([a-z]+-\d+)/);
+                const fromMatch = p.gradient.match(/from-([a-z]+-\d+)/);
                 if (fromMatch) {
                   color = tailwindToHex(fromMatch[1]);
                 } else {

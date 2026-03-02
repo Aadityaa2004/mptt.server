@@ -37,7 +37,6 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          config: .golangci.yml
 
       - name: govulncheck
         run: |
@@ -64,6 +63,8 @@ jobs:
 
       - name: Test frontend
         run: cd src/production/mqt.frontend && npm run test
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
       - name: npm audit
         run: cd src/production/mqt.frontend && npm audit --audit-level=high || true
