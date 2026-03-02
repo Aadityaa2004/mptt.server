@@ -99,10 +99,13 @@ else
     DOCKER_COMPOSE="docker-compose"
 fi
 
+# Always pass .env.production so compose gets vars for substitution (image names, etc.)
+COMPOSE_ARGS="-f docker-compose.rpi.yml --env-file .env.production"
+
 echo -e "${BLUE}Pulling Docker images from Docker Hub...${NC}\n"
 
 # Pull images
-$DOCKER_COMPOSE -f docker-compose.rpi.yml pull
+$DOCKER_COMPOSE $COMPOSE_ARGS pull
 
 echo -e "\n${GREEN}✓ Images pulled successfully${NC}\n"
 
@@ -113,7 +116,7 @@ echo -e "${GREEN}✓ Network ready${NC}\n"
 
 # Start services
 echo -e "${BLUE}Starting services...${NC}\n"
-$DOCKER_COMPOSE -f docker-compose.rpi.yml up -d
+$DOCKER_COMPOSE $COMPOSE_ARGS up -d
 
 echo -e "\n${GREEN}✓ Services started${NC}\n"
 
@@ -130,11 +133,11 @@ echo -e "${GREEN}Deployment completed successfully!${NC}"
 echo -e "${GREEN}========================================${NC}\n"
 
 echo -e "${YELLOW}Next steps:${NC}"
-echo -e "1. Verify Cloudflare Tunnel is running: docker compose -f docker-compose.rpi.yml logs cloudflared"
+echo -e "1. Verify Cloudflare Tunnel is running: $DOCKER_COMPOSE $COMPOSE_ARGS logs cloudflared"
 echo -e "2. Configure tunnel hostname in Cloudflare dashboard: orpheus-networks.com -> http://nginx:80"
 echo -e "3. Test external access: https://orpheus-networks.com"
 echo -e "\n${BLUE}To view logs:${NC}"
-echo -e "  $DOCKER_COMPOSE -f docker-compose.rpi.yml logs -f"
+echo -e "  $DOCKER_COMPOSE $COMPOSE_ARGS logs -f"
 echo -e "\n${BLUE}To stop services:${NC}"
-echo -e "  $DOCKER_COMPOSE -f docker-compose.rpi.yml down"
+echo -e "  $DOCKER_COMPOSE $COMPOSE_ARGS down"
 
