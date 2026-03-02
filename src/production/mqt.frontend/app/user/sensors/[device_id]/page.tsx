@@ -99,18 +99,19 @@ export default function SensorAnalyticsPage() {
           setPiId(pi.pi_id);
           setIsFindingPi(false);
           return;
-        } catch (err: any) {
+        } catch (err: unknown) {
           // Check if it's a 404 - that means device doesn't exist on this PI
           // Other errors might be network issues, so we should continue
-          const is404 = err?.message?.includes("404") || err?.message?.includes("not found");
+          const message = err instanceof Error ? err.message : String(err);
+          const is404 = message.includes("404") || message.toLowerCase().includes("not found");
           if (is404) {
             console.log(`PI ${pi.pi_id} doesn't have this device (404), trying next...`);
             continue;
-          } else {
-            // For other errors, log but continue
-            console.error(`Error checking PI ${pi.pi_id}:`, err);
-            continue;
-          }
+          } 
+          
+          // For other errors, log but continue
+          console.error(`Error checking PI ${pi.pi_id}:`, err);
+          continue;
         }
       }
 

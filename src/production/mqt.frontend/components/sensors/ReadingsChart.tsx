@@ -18,6 +18,17 @@ interface ReadingsChartProps {
   timeRange: "1h" | "1d" | "1w" | "1m" | "1y";
 }
 
+interface CustomTooltipPayloadEntry {
+  value: number | null;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: CustomTooltipPayloadEntry[];
+  label?: string;
+  unit: string;
+}
+
 export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
   // Calculate the cutoff time based on the selected range
   // Use the most recent timestamp in the dataset as the reference point
@@ -119,18 +130,25 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
     return filtered;
   }, [readings, timeRange]);
 
-  const CustomTooltip = ({ active, payload, label, unit }: any) => {
-    if (active && payload && payload.length && payload[0].value !== null) {
+  const CustomTooltip = ({ active, payload, label, unit }: CustomTooltipProps) => {
+    if (!active || !payload || !payload.length) {
+      return null;
+    }
+
+    const value = payload[0].value;
+    if (value === null || value === undefined) {
+      return null;
+    }
+
       return (
         <div className="bg-black/95 border border-orange-500/30 rounded-lg p-3 shadow-xl shadow-orange-500/20">
           <p className="text-white/70 text-xs mb-2 font-light">{label}</p>
           <p className="text-base font-light text-orange-400">
-            {`${payload[0].value.toFixed(1)}${unit}`}
+            {`${value.toFixed(1)}${unit}`}
           </p>
         </div>
       );
-    }
-    return null;
+    };
   };
 
   if (readings.length === 0) {
