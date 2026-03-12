@@ -147,15 +147,6 @@ External Users ← REST API ← API Service ← JWT Authentication ← External 
 - Scale API for high HTTP traffic
 - Different resource requirements
 
-## 🚫 **What's NOT There (Clarifying Confusion)**
-
-### **No "Auth Service"**
-There is **NO separate auth service**. Authentication is handled by the **API Service** itself. The API Service includes:
-- JWT token generation and validation
-- User management
-- Role-based access control
-- Login/logout endpoints
-
 ### **No Separate Database Services**
 There is **NO separate database service**. PostgreSQL is just infrastructure, and only the API Service accesses it.
 
