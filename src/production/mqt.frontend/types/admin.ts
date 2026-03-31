@@ -59,6 +59,7 @@ export interface Reading {
     battery_percentage: number;
   };
   fill_percentage?: number;
+  sap_depth_cm?: number; // Fill depth from bottom (cm) — user-facing metric
 }
 
 export interface SummaryStatistics {

@@ -112,3 +112,8 @@ export interface WeatherForecast {
   city: ForecastCity;
 }
 
+/** Response from GET /api/auth/weather/sap-flow (maple sap flow conditions for today). */
+export interface SapFlowDayResponse {
+  good_sap_flow_day: boolean;
+}
+

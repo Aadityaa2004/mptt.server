@@ -109,12 +109,17 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
       })
       .map((reading) => {
         const timeLabel = formatTimeLabel(reading.ts, timeRange);
+        // Prefer sap_depth_cm (fill from bottom) for user-friendly chart
+        const sapValue =
+          reading.sap_depth_cm != null
+            ? reading.sap_depth_cm
+            : reading.payload.sensors.level?.value ?? null;
 
         return {
           timestamp: reading.ts,
           timeLabel,
           temperature: reading.payload.sensors.temperature?.value ?? null,
-          sapLevel: reading.payload.sensors.level?.value ?? null,
+          sapLevel: sapValue,
           battery: reading.payload.battery_percentage ?? null,
         };
       });
@@ -202,8 +207,8 @@ export function ReadingsChart({ readings, timeRange }: ReadingsChartProps) {
               <Droplets className="h-5 w-5 text-orange-400/90" />
             </div>
             <div>
-              <h3 className="text-base font-light text-white/90">Sap Level</h3>
-              <p className="text-xs text-white/50 font-light">Over time</p>
+              <h3 className="text-base font-light text-white/90">Sap Depth</h3>
+              <p className="text-xs text-white/50 font-light">Fill level over time (cm from bottom)</p>
             </div>
           </div>
           <div className="w-full h-[300px]">

@@ -2,11 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import { ReadingsTable } from "./ReadingsTable"
 
+vi.mock("@/services/api/sensorService", () => ({
+  sensorService: {
+    getDeviceReadings: vi.fn().mockResolvedValue({ items: [], next_page_token: null }),
+  },
+}))
+
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve({ readings: [], next_page_token: null }),
-  }))
+  vi.clearAllMocks()
 })
 
 describe("ReadingsTable", () => {

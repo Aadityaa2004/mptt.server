@@ -127,6 +127,7 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 			latitude    DOUBLE PRECISION,
 			longitude   DOUBLE PRECISION,
 			locations   JSONB DEFAULT '[]'::jsonb,
+			sap_alert_threshold_percent INTEGER,
 			created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 			updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
@@ -208,9 +209,10 @@ func (dm *DatabaseManager) CreateTables(ctx context.Context) error {
 		CREATE INDEX IF NOT EXISTS idx_verification_tokens_expires_at ON verification_tokens (expires_at);
 	`
 
-	// Add email_verified_at column to users table (for existing databases)
+	// Add email_verified_at and sap_alert_threshold_percent to users (for existing databases)
 	alterUsersTable := `
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS sap_alert_threshold_percent INTEGER;
 	`
 
 	// Add metadata column to verification_tokens (for existing databases)

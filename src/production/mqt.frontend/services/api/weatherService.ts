@@ -4,6 +4,7 @@ import type {
   LocationUpdateRequest,
   CurrentWeather,
   WeatherForecast,
+  SapFlowDayResponse,
 } from "@/types/weather";
 
 export const weatherService = {
@@ -93,6 +94,21 @@ export const weatherService = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch forecast" }));
       throw new Error(error.message || "Failed to fetch forecast");
+    }
+
+    return response.json();
+  },
+
+  async getSapFlowDay(): Promise<SapFlowDayResponse> {
+    const response = await apiFetch("/api/auth/weather/sap-flow", {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to fetch sap flow day" }));
+      throw new Error(
+        error.error || error.message || error.detail || "Failed to fetch sap flow day"
+      );
     }
 
     return response.json();

@@ -258,7 +258,7 @@ export default function AdminReadingsPage() {
                       <th className="px-4 py-3 text-left text-sm font-light">Timestamp</th>
                       <th className="px-4 py-3 text-left text-sm font-light">Device ID</th>
                       <th className="px-4 py-3 text-left text-sm font-light">Temperature</th>
-                      <th className="px-4 py-3 text-left text-sm font-light">Level</th>
+                      <th className="px-4 py-3 text-left text-sm font-light">Sap depth</th>
                       <th className="px-4 py-3 text-left text-sm font-light">Fill %</th>
                       <th className="px-4 py-3 text-left text-sm font-light">Battery</th>
                     </tr>
@@ -276,7 +276,11 @@ export default function AdminReadingsPage() {
                           {r.payload.sensors.temperature ? `${r.payload.sensors.temperature.value} ${r.payload.sensors.temperature.unit}` : "N/A"}
                         </td>
                         <td className="px-4 py-3 text-sm font-light">
-                          {r.payload.sensors.level ? `${r.payload.sensors.level.value} ${r.payload.sensors.level.unit}` : "N/A"}
+                          {r.payload.sensors.level
+                            ? r.sap_depth_cm != null
+                              ? `${r.sap_depth_cm.toFixed(0)} cm sap`
+                              : `${r.payload.sensors.level.value} cm to surface`
+                            : "N/A"}
                         </td>
                         <td className="px-4 py-3 text-sm font-light">
                           {r.fill_percentage !== undefined ? <span className={r.fill_percentage >= 75 ? "text-orange-400 font-medium" : ""}>{r.fill_percentage.toFixed(1)}%</span> : "N/A"}
@@ -389,10 +393,14 @@ export default function AdminReadingsPage() {
                         <div className="border border-white/10 rounded-lg p-4 bg-white/5">
                           <div className="flex items-center gap-2 mb-2">
                             <Droplets className="h-5 w-5 text-white/60" />
-                            <span className="text-sm text-white/60 font-light">Sap Level</span>
+                            <span className="text-sm text-white/60 font-light">Fill Level</span>
                           </div>
                           <div className="text-2xl font-light">
-                            {latestReading.payload.sensors.level.value.toFixed(1)} {latestReading.payload.sensors.level.unit}
+                            {latestReading.fill_percentage != null
+                              ? `${latestReading.fill_percentage.toFixed(1)}% fill`
+                              : latestReading.sap_depth_cm != null
+                                ? `${latestReading.sap_depth_cm.toFixed(0)} cm sap`
+                                : `${latestReading.payload.sensors.level.value.toFixed(1)} cm to surface`}
                           </div>
                         </div>
                       )}
@@ -439,7 +447,7 @@ export default function AdminReadingsPage() {
                           <th className="px-4 py-3 text-left text-sm font-light">Timestamp</th>
                           <th className="px-4 py-3 text-left text-sm font-light">Device ID</th>
                           <th className="px-4 py-3 text-left text-sm font-light">Temperature</th>
-                          <th className="px-4 py-3 text-left text-sm font-light">Level</th>
+                          <th className="px-4 py-3 text-left text-sm font-light">Sap depth</th>
                           <th className="px-4 py-3 text-left text-sm font-light">Fill %</th>
                           <th className="px-4 py-3 text-left text-sm font-light">Battery</th>
                         </tr>
@@ -450,7 +458,13 @@ export default function AdminReadingsPage() {
                             <td className="px-4 py-3 text-sm font-light">{new Date(r.ts).toLocaleString()}</td>
                             <td className="px-4 py-3 text-sm font-light font-mono">{r.device_id}</td>
                             <td className="px-4 py-3 text-sm font-light">{r.payload.sensors.temperature ? `${r.payload.sensors.temperature.value} ${r.payload.sensors.temperature.unit}` : "N/A"}</td>
-                            <td className="px-4 py-3 text-sm font-light">{r.payload.sensors.level ? `${r.payload.sensors.level.value} ${r.payload.sensors.level.unit}` : "N/A"}</td>
+                            <td className="px-4 py-3 text-sm font-light">
+                              {r.payload.sensors.level
+                                ? r.sap_depth_cm != null
+                                  ? `${r.sap_depth_cm.toFixed(0)} cm sap`
+                                  : `${r.payload.sensors.level.value} cm to surface`
+                                : "N/A"}
+                            </td>
                             <td className="px-4 py-3 text-sm font-light">{r.fill_percentage !== undefined ? <span className={r.fill_percentage >= 75 ? "text-orange-400 font-medium" : ""}>{r.fill_percentage.toFixed(1)}%</span> : "N/A"}</td>
                             <td className="px-4 py-3 text-sm font-light">{r.payload.battery_percentage}%</td>
                           </tr>

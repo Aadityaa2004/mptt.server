@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { sensorService } from "@/services/api/sensorService";
 import type { Reading } from "@/types/admin";
 import { Loader2, Thermometer, Droplets, Battery } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,13 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
       setIsLoading(true);
       setError(null);
 
-      const queryParams = new URLSearchParams({
+      const data = await sensorService.getDeviceReadings(piId, deviceId, {
+        page: pageNum,
+        limit,
+      });
+
+      /*
+      const queryParams_REMOVE = new URLSearchParams({
         device_id: deviceId,
         pi_id: piId,
         page: pageNum.toString(),
@@ -57,6 +64,7 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
       }
 
       const data = await response.json();
+      */
       
       // Handle empty response
       if (!data || !data.items || !Array.isArray(data.items) || data.items.length === 0) {
@@ -165,7 +173,7 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
             <tr className="border-b border-white/5">
               <th className="px-6 py-3 text-left text-xs font-light text-white/50">Timestamp</th>
               <th className="px-6 py-3 text-left text-xs font-light text-white/50">Temperature</th>
-              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Sap Level</th>
+              <th className="px-6 py-3 text-left text-xs font-light text-white/50">Sap depth</th>
               <th className="px-6 py-3 text-left text-xs font-light text-white/50">Battery</th>
             </tr>
           </thead>
@@ -200,7 +208,9 @@ export function ReadingsTable({ deviceId, piId, initialPage = 1, limit = 20 }: R
                     <div className="flex items-center gap-2">
                       <Droplets className="h-4 w-4 text-white/40" />
                       <span>
-                        {reading.payload.sensors.level.value.toFixed(1)} {reading.payload.sensors.level.unit}
+                        {reading.sap_depth_cm != null
+                          ? `${reading.sap_depth_cm.toFixed(0)} cm sap`
+                          : `${reading.payload.sensors.level.value.toFixed(1)} cm to surface`}
                       </span>
                     </div>
                   ) : (
