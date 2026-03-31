@@ -167,15 +167,16 @@ export function DeviceCarousel({ devices, currentIndex, onClose, onNavigate, onD
                   <Droplets className="h-4 w-4 text-orange-400/80" />
                   {latestReading.fill_percentage != null ? (
                     <span className="text-sm font-light text-white/90">{latestReading.fill_percentage.toFixed(0)}% fill</span>
+                  ) : latestReading.sap_depth_cm != null ? (
+                    <span className="text-sm font-light text-white/90">{latestReading.sap_depth_cm.toFixed(0)} cm sap</span>
+                  ) : currentDevice.height != null ? (
+                    <span className="text-sm font-light text-white/90">{Math.max(0, currentDevice.height - latestReading.payload.sensors.level.value).toFixed(0)} cm sap</span>
                   ) : (
-                    <>
-                      <span className="text-sm font-light text-white/90">{latestReading.payload.sensors.level.value.toFixed(1)}</span>
-                      <span className="text-[10px] font-light text-white/50">{latestReading.payload.sensors.level.unit}</span>
-                    </>
+                    <span className="text-sm font-light text-white/90">{latestReading.payload.sensors.level.value.toFixed(1)} cm to surface</span>
                   )}
                   {currentDevice.height != null && (
                     <span className="text-[10px] text-white/40 font-light">
-                      {Math.max(0, currentDevice.height - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm left
+                      {Math.max(0, currentDevice.height - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm to top
                     </span>
                   )}
                 </div>

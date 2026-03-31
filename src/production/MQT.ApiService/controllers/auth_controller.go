@@ -18,9 +18,9 @@ import (
 
 // AuthController handles authentication requests
 type AuthController struct {
-	authService         *service.AuthService
-	openWeatherAPIKey   string
-	turnstileSecretKey  string
+	authService        *service.AuthService
+	openWeatherAPIKey  string
+	turnstileSecretKey string
 }
 
 // NewAuthController creates a new auth controller
@@ -264,12 +264,12 @@ func (h *AuthController) UpdateProfile(c *gin.Context) {
 	}
 
 	var req struct {
-		Username               string   `json:"username,omitempty"`
-		Email                  string   `json:"email,omitempty"`
-		Password               string   `json:"password,omitempty"`
-		Latitude               *float64 `json:"latitude,omitempty"`
-		Longitude              *float64 `json:"longitude,omitempty"`
-		SapAlertThresholdPct   *int     `json:"sap_alert_threshold_percent,omitempty"`
+		Username             string   `json:"username,omitempty"`
+		Email                string   `json:"email,omitempty"`
+		Password             string   `json:"password,omitempty"`
+		Latitude             *float64 `json:"latitude,omitempty"`
+		Longitude            *float64 `json:"longitude,omitempty"`
+		SapAlertThresholdPct *int     `json:"sap_alert_threshold_percent,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -476,6 +476,82 @@ func (h *AuthController) GetWeatherForecast(c *gin.Context) {
 	c.JSON(http.StatusOK, forecastData)
 }
 
+func (h *AuthController) GetGoodSapFlowDay(c *gin.Context) {
+	// Get coordinates
+	lat, lon, err := h.getCoordinates(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get API key
+	if h.openWeatherAPIKey == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "OPENWEATHER_API_KEY is not configured"})
+		return
+	}
+
+	// Build API URL
+	forecastURL := fmt.Sprintf(
+		"https://api.openweathermap.org/data/2.5/forecast?lat=%.4f&lon=%.4f&appid=%s&units=metric",
+		lat, lon, h.openWeatherAPIKey,
+	)
+
+	// Make API request
+	resp, err := http.Get(forecastURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable to connect to forecast API: %v", err)})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("forecast API returned status code %d", resp.StatusCode)})
+		return
+	}
+
+	// Decode response
+	var forecastData weather_models.Forecast
+	err = json.NewDecoder(resp.Body).Decode(&forecastData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable to process forecast data: %v", err)})
+		return
+	}
+
+	offsetSeconds := forecastData.City.Timezone
+	farmerLoc := time.FixedZone("farmer-location", offsetSeconds)
+
+	nowLocal := time.Now().In(farmerLoc)
+	today := nowLocal.Format("2006-01-02")
+	yesterday := nowLocal.AddDate(0, 0, -1).Format("2006-01-02")
+
+	hasNightBelowFreezing := false
+	hasDayAboveFreezing := false
+
+	for _, item := range forecastData.List {
+		t := time.Unix(item.Dt, 0).In(farmerLoc)
+		dateStr := t.Format("2006-01-02")
+		hour := t.Hour()
+
+		// Last night: yesterday 6 PM through today 8:59 AM
+		if (dateStr == yesterday && hour >= 18) || (dateStr == today && hour < 9) {
+			if item.Main.Temp < 0 {
+				hasNightBelowFreezing = true
+			}
+		}
+
+		// Today daytime: today 9 AM through 5:59 PM
+		if dateStr == today && hour >= 9 && hour < 18 {
+			if item.Main.Temp > 0 {
+				hasDayAboveFreezing = true
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"good_sap_flow_day": hasNightBelowFreezing && hasDayAboveFreezing,
+	})
+}
+
 // VerifyEmail handles OTP verification and activates the account
 func (h *AuthController) VerifyEmail(c *gin.Context) {
 	var req service.VerifyEmailRequest
@@ -525,8 +601,8 @@ func (h *AuthController) ResendOTP(c *gin.Context) {
 // ForgotPassword initiates password reset flow
 func (h *AuthController) ForgotPassword(c *gin.Context) {
 	var req struct {
-		Email           string `json:"email" binding:"required"`
-		TurnstileToken  string `json:"turnstile_token"`
+		Email          string `json:"email" binding:"required"`
+		TurnstileToken string `json:"turnstile_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -588,6 +664,7 @@ func (h *AuthController) RegisterRoutes(router *gin.Engine, authMiddleware *midd
 		protected.PUT("/location", h.UpdateLocation)
 		protected.GET("/weather", h.GetCurrentWeather)
 		protected.GET("/weather/forecast", h.GetWeatherForecast)
+		protected.GET("/weather/sap-flow", h.GetGoodSapFlowDay)
 	}
 
 	// Admin-only routes (requires authentication + admin role)

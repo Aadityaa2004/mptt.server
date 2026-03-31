@@ -354,24 +354,35 @@ export default function SensorAnalyticsPage() {
                       {latestReading.fill_percentage != null ? (
                         <>
                           <div className="text-xl font-light">{latestReading.fill_percentage.toFixed(1)}% fill</div>
-                          <p className="text-xs text-white/50 font-light">Sap Level</p>
-                          {deviceHeight != null && (
+                          <p className="text-xs text-white/50 font-light">Fill Level</p>
+                          {latestReading.sap_depth_cm != null && (
                             <p className="text-[11px] text-white/40 font-light mt-0.5">
-                              {Math.max(0, deviceHeight - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm remaining
+                              {latestReading.sap_depth_cm.toFixed(0)} cm sap in bucket
                             </p>
                           )}
                         </>
-                      ) : (
+                      ) : latestReading.sap_depth_cm != null ? (
                         <>
-                          <div className="text-xl font-light">
-                            {latestReading.payload.sensors.level.value.toFixed(1)} {latestReading.payload.sensors.level.unit}
-                          </div>
-                          <p className="text-xs text-white/50 font-light">Sap Level</p>
+                          <div className="text-xl font-light">{latestReading.sap_depth_cm.toFixed(0)} cm sap</div>
+                          <p className="text-xs text-white/50 font-light">Fill Level</p>
                           {deviceHeight != null && (
                             <p className="text-[11px] text-white/40 font-light mt-0.5">
-                              {Math.max(0, deviceHeight - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm remaining
+                              {latestReading.payload.sensors.level.value.toFixed(0)} cm to top
                             </p>
                           )}
+                        </>
+                      ) : deviceHeight != null ? (
+                        <>
+                          <div className="text-xl font-light">{Math.max(0, deviceHeight - latestReading.payload.sensors.level.value).toFixed(0)} cm sap</div>
+                          <p className="text-xs text-white/50 font-light">Fill Level</p>
+                          <p className="text-[11px] text-white/40 font-light mt-0.5">
+                            {latestReading.payload.sensors.level.value.toFixed(0)} cm to top
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xl font-light">{latestReading.payload.sensors.level.value.toFixed(1)} cm to surface</div>
+                          <p className="text-xs text-white/50 font-light">Sensor reading</p>
                         </>
                       )}
                     </div>

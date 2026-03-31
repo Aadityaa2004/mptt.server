@@ -110,15 +110,16 @@ export function DeviceCard({ device }: DeviceCardProps) {
                 <Droplets className="h-3.5 w-3.5 text-orange-400/80" />
                 {latestReading.fill_percentage != null ? (
                   <span className="text-xs font-light text-white/90">{latestReading.fill_percentage.toFixed(0)}% fill</span>
+                ) : latestReading.sap_depth_cm != null ? (
+                  <span className="text-xs font-light text-white/90">{latestReading.sap_depth_cm.toFixed(0)} cm sap</span>
+                ) : deviceDims?.height != null ? (
+                  <span className="text-xs font-light text-white/90">{Math.max(0, deviceDims.height - latestReading.payload.sensors.level.value).toFixed(0)} cm sap</span>
                 ) : (
-                  <>
-                    <span className="text-xs font-light text-white/90">{latestReading.payload.sensors.level.value.toFixed(1)}</span>
-                    <span className="text-[10px] font-light text-white/50">{latestReading.payload.sensors.level.unit}</span>
-                  </>
+                  <span className="text-xs font-light text-white/90">{latestReading.payload.sensors.level.value.toFixed(1)} cm to surface</span>
                 )}
                 {deviceDims?.height != null && (
                   <span className="text-[9px] text-white/40 font-light">
-                    {Math.max(0, deviceDims.height - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm left
+                    {Math.max(0, deviceDims.height - latestReading.payload.sensors.level.value).toFixed(0)}cm sap · {latestReading.payload.sensors.level.value.toFixed(0)}cm to top
                   </span>
                 )}
               </div>

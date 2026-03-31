@@ -55,6 +55,7 @@ export default function UserDashboardPage() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [showLocationInput, setShowLocationInput] = useState(false);
+  const [sapFlowGood, setSapFlowGood] = useState<boolean | null>(null);
   
   // Device management
   const [devices, setDevices] = useState<Device[]>([]);
@@ -144,8 +145,26 @@ export default function UserDashboardPage() {
     try {
       setIsLoadingWeather(true);
       setError(null);
-      const current = await weatherService.getCurrentWeather();
+      setSapFlowGood(null);
+
+      const [weatherResult, sapResult] = await Promise.allSettled([
+        weatherService.getCurrentWeather(),
+        weatherService.getSapFlowDay(),
+      ]);
+
+      if (weatherResult.status === "rejected") {
+        throw weatherResult.reason;
+      }
+
+      const current = weatherResult.value;
       setCurrentWeather(current);
+      if (sapResult.status === "fulfilled") {
+        setSapFlowGood(sapResult.value.good_sap_flow_day);
+      } else {
+        console.warn("Sap flow day fetch failed:", sapResult.reason);
+        setSapFlowGood(null);
+      }
+
       if (!locationName && current.name) {
         setLocationName(current.name);
       }
@@ -308,10 +327,23 @@ export default function UserDashboardPage() {
       <main className="pt-16 sm:pt-20">
         <div className="max-w-[1600px] mx-auto">
           {/* Header - minimal */}
-          <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-white/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground">
               Dashboard
             </h1>
+            {hasLocation && sapFlowGood !== null && (
+              <div
+                className={
+                  sapFlowGood
+                    ? "rounded-lg border border-emerald-400 bg-green-600/20 px-3 py-2 text-sm font-light text-white shrink-0"
+                    : "rounded-lg border border-red-400 bg-red-600/20 px-3 py-2 text-sm font-light text-white shrink-0"
+                }
+                role="status"
+                aria-live="polite"
+              >
+                Sap Flow Conditions: {sapFlowGood ? "Ideal" : "Not Ideal"}
+              </div>
+            )}
           </div>
 
           {error && (

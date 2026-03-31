@@ -87,10 +87,12 @@ func calculateFillPercentage(height, topDiameter, bottomDiameter, sensorDistance
 	return math.Round(fillPct*100) / 100 // round to 2 decimal places
 }
 
-// readingResponse wraps a reading with optional fill_percentage
+// readingResponse wraps a reading with optional fill_percentage and sap_depth_cm.
+// sap_depth_cm is the fill depth from bottom (cm); user-facing alternative to raw sensor distance.
 type readingResponse struct {
 	hardware_models.Reading
 	FillPercentage *float64 `json:"fill_percentage,omitempty"`
+	SapDepthCm     *float64 `json:"sap_depth_cm,omitempty"`
 }
 
 // enrichReadingsWithFillPercentage adds fill percentage to readings if device dimensions are set
@@ -122,8 +124,18 @@ func (c *ReadingController) enrichReadingsWithFillPercentage(ctx *gin.Context, r
 		// Check if dimensions are set and level sensor data exists
 		if device.Height > 0 && device.TopDiameter > 0 && device.BottomDiameter > 0 &&
 			r.Payload.Sensors.Level != nil {
-			fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, r.Payload.Sensors.Level.Value)
+			sensorDist := r.Payload.Sensors.Level.Value
+			fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, sensorDist)
 			result[i].FillPercentage = &fillPct
+			// Sap depth = fill from bottom (cm) — user-facing metric
+			sapDepth := device.Height - sensorDist
+			if sapDepth < 0 {
+				sapDepth = 0
+			}
+			if sapDepth > device.Height {
+				sapDepth = device.Height
+			}
+			result[i].SapDepthCm = &sapDepth
 		}
 	}
 
