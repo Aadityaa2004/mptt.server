@@ -57,7 +57,7 @@ docker login
 echo -e "${GREEN}✓ Logged in${NC}\n"
 
 # Build and push MQTT Ingestor Service
-echo -e "\n${GREEN}[1/5] Building MQTT Ingestor Service (ARM64)...${NC}"
+echo -e "\n${GREEN}[1/6] Building MQTT Ingestor Service (ARM64)...${NC}"
 INGESTOR_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-ingestor:${VERSION}"
 docker buildx build \
     --platform ${PLATFORM} \
@@ -69,7 +69,7 @@ docker buildx build \
 echo -e "${GREEN}✓ Ingestor Service pushed${NC}"
 
 # Build and push MQTT Bridge
-echo -e "\n${GREEN}[2/5] Building MQTT Bridge (ARM64)...${NC}"
+echo -e "\n${GREEN}[2/6] Building MQTT Bridge (ARM64)...${NC}"
 BRIDGE_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-bridge:${VERSION}"
 docker buildx build \
     --platform ${PLATFORM} \
@@ -81,7 +81,7 @@ docker buildx build \
 echo -e "${GREEN}✓ MQTT Bridge pushed${NC}"
 
 # Build and push MQTT Mosquitto
-echo -e "\n${GREEN}[3/5] Building MQTT Mosquitto (ARM64)...${NC}"
+echo -e "\n${GREEN}[3/6] Building MQTT Mosquitto (ARM64)...${NC}"
 MOSQUITTO_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-mosquitto:${VERSION}"
 docker buildx build \
     --platform ${PLATFORM} \
@@ -93,7 +93,7 @@ docker buildx build \
 echo -e "${GREEN}✓ MQTT Mosquitto pushed${NC}"
 
 # Build and push API Service
-echo -e "\n${GREEN}[4/5] Building API Service (ARM64)...${NC}"
+echo -e "\n${GREEN}[4/6] Building API Service (ARM64)...${NC}"
 API_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-api:${VERSION}"
 docker buildx build \
     --platform ${PLATFORM} \
@@ -104,8 +104,20 @@ docker buildx build \
     .
 echo -e "${GREEN}✓ API Service pushed${NC}"
 
+# Build and push Email Service (same stack as docker-compose.rpi.yml)
+echo -e "\n${GREEN}[5/6] Building MQT Email Service (ARM64)...${NC}"
+EMAIL_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:${VERSION}"
+docker buildx build \
+    --platform ${PLATFORM} \
+    -t "${EMAIL_IMAGE}" \
+    -t "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:latest" \
+    -f ./src/production/MQT.EmailService/Dockerfile \
+    --push \
+    .
+echo -e "${GREEN}✓ MQT Email Service pushed${NC}"
+
 # Build and push Frontend
-echo -e "\n${GREEN}[5/5] Building Frontend (ARM64)...${NC}"
+echo -e "\n${GREEN}[6/6] Building Frontend (ARM64)...${NC}"
 FRONTEND_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-frontend:${VERSION}"
 docker buildx build \
     --platform ${PLATFORM} \
@@ -127,8 +139,10 @@ echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-ingestor:${VERSION}"
 echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-bridge:${VERSION}"
 echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-mosquitto:${VERSION}"
 echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-api:${VERSION}"
+echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:${VERSION}"
 echo "  - ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-frontend:${VERSION}"
 
-echo -e "\n${BLUE}Verify architecture:${NC}"
+echo -e "\n${BLUE}Verify architecture (example):${NC}"
 echo "  docker buildx imagetools inspect ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-ingestor:latest"
+echo "  docker buildx imagetools inspect ${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:latest"
 

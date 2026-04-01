@@ -76,6 +76,15 @@ echo -e "${GREEN}Pushing API Service...${NC}"
 docker push "${API_IMAGE}"
 docker push "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-api:latest"
 
+# Email image is multi-arch (amd64 + arm64); needs buildx with a bootstrapped builder
+if ! docker buildx version &> /dev/null; then
+    echo -e "${RED}Error: Docker Buildx is required for the Email Service (multi-platform build).${NC}"
+    exit 1
+fi
+echo -e "${YELLOW}Preparing Buildx for multi-platform Email Service...${NC}"
+docker buildx create --name multiarch --use 2>/dev/null || docker buildx use multiarch
+docker buildx inspect --bootstrap
+
 # Build and push Email Service (multi-arch: amd64 + arm64 for Raspberry Pi)
 echo -e "\n${GREEN}[5/6] Building MQT Email Service (linux/amd64 + linux/arm64)...${NC}"
 EMAIL_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-email:${VERSION}"
