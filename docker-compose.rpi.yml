@@ -1,3 +1,9 @@
+# ${POSTGRES_USER}, ${IMAGE_TAG}, etc. are substituted from:
+#   - a `.env` file in this directory, or
+#   - `docker compose --env-file .env.production ...`
+# Per-service `env_file:` only sets variables inside containers; it does not
+# drive YAML substitution. Use a filled-in `.env.production` on the Pi.
+
 services:
   # MQTT Broker (Mosquitto) - Production
   mosquitto:
@@ -124,12 +130,9 @@ services:
       # Timezone
       - TZ=Etc/UTC
     restart: unless-stopped
+    # Distroless image has no shell; CMD-SHELL healthchecks always fail.
     healthcheck:
-      test: ["CMD-SHELL", "exit 0"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      disable: true
     networks:
       - mqtt-network
 
@@ -201,11 +204,7 @@ services:
       - TZ=Etc/UTC
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "exit 0"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      disable: true
     networks:
       - mqtt-network
 
@@ -276,11 +275,11 @@ services:
       - mqtt-network
     healthcheck:
       # Use /health/live (proxied to api-service) - fast, no frontend/Next.js dependency
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health/live"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health/live"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 60s
 
   # Cloudflare Tunnel connector
   cloudflared:

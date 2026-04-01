@@ -34,7 +34,7 @@ class BridgeConfig:
     @classmethod
     def from_env(cls) -> "BridgeConfig":
         return cls(
-            external_broker=os.getenv("EXTERNAL_BROKER_HOST", "172.24.131.97"),
+            external_broker=os.getenv("EXTERNAL_BROKER_HOST", "").strip(),
             external_port=int(os.getenv("EXTERNAL_BROKER_PORT", "1883")),
             local_broker=os.getenv("LOCAL_BROKER_HOST", "mosquitto"),
             local_port=int(os.getenv("LOCAL_BROKER_PORT", "1883")),
@@ -183,9 +183,19 @@ class MQTTBridge:
         print(f"🔍 Filter: {cfg.topic_filter}")
         print("Press Ctrl+C to stop...")
         print()
-        
+
+        if not (cfg.external_broker or "").strip():
+            print("MQTT bridge: EXTERNAL_BROKER_HOST is not set; idling (no external forwarding).")
+            print("Set EXTERNAL_BROKER_HOST in the environment to enable the bridge.")
+            try:
+                while True:
+                    time.sleep(86400)
+            except KeyboardInterrupt:
+                print("\n🛑 Stopping bridge...")
+            return None
+
         self.running = True
-        
+
         try:
             # Create clients
             self.create_clients()
@@ -247,7 +257,9 @@ class MQTTBridge:
 
 def main():
     bridge = MQTTBridge(config=BridgeConfig.from_env())
-    bridge.start()
+    if bridge.start() is False:
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
