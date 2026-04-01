@@ -12,6 +12,7 @@ Runs on the FARM RPi.
 import json
 import sys
 import time
+import uuid
 from datetime import datetime
 
 try:
@@ -26,6 +27,10 @@ except ImportError:
 
 # Logical PI ID in your system
 PI_ID = "pi_test"
+
+# Unique MQTT client suffix so a second run / another script never steals this session
+# (duplicate client_id => broker disconnects the older connection, often seen as rc=7).
+_CLIENT_SUFFIX = uuid.uuid4().hex[:8]
 
 # Local broker on the farm RPi (where Maple node publishes)
 LOCAL_MQTT_HOST = "localhost"
@@ -134,12 +139,13 @@ class RemotePublisher:
     def __init__(self):
         # MQTT v3.1.1 over WebSockets
         self.client = mqtt.Client(
-            client_id=f"farm-{PI_ID}",
+            client_id=f"farm-{PI_ID}-{_CLIENT_SUFFIX}",
             protocol=mqtt.MQTTv311,
             transport="websockets",
         )
         # WebSocket path (/mqtt)
         self.client.ws_set_options(path=REMOTE_MQTT_PATH)
+        self.client.reconnect_delay_set(min_delay=1, max_delay=120)
 
         if REMOTE_USE_TLS:
             # Use default system CA certificates
@@ -241,9 +247,10 @@ class FarmTranslator:
         self.remote = remote_publisher
 
         self.local_client = mqtt.Client(
-            client_id=f"farm-local-{PI_ID}",
+            client_id=f"farm-local-{PI_ID}-{_CLIENT_SUFFIX}",
             protocol=mqtt.MQTTv311,
         )
+        self.local_client.reconnect_delay_set(min_delay=1, max_delay=120)
 
         self.local_client.on_connect = self.on_local_connect
         self.local_client.on_message = self.on_local_message
