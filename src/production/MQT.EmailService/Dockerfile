@@ -1,6 +1,6 @@
 # Multi-stage build for Go Email Alert Service
 # Stage 1: Build
-FROM golang:1.25-alpine AS build
+FROM golang:1.25.8-alpine AS build
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata

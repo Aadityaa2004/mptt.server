@@ -119,10 +119,11 @@ echo -e "${GREEN}✓ MQT Email Service pushed${NC}"
 # Build and push Frontend
 echo -e "\n${GREEN}[6/6] Building Frontend (ARM64)...${NC}"
 FRONTEND_IMAGE="${DOCKERHUB_USERNAME}/${PROJECT_NAME}-frontend:${VERSION}"
+# Base URLs must be origin only (no `/api`) — client paths already use `/api/...`.
 docker buildx build \
     --platform ${PLATFORM} \
-    --build-arg NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com/api \
-    --build-arg NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com/api \
+    --build-arg NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-https://orpheus-networks.com}" \
+    --build-arg NEXT_PUBLIC_READINGS_API_BASE_URL="${NEXT_PUBLIC_READINGS_API_BASE_URL:-https://orpheus-networks.com}" \
     -t "${FRONTEND_IMAGE}" \
     -t "${DOCKERHUB_USERNAME}/${PROJECT_NAME}-frontend:latest" \
     -f ./src/production/mqt.frontend/Dockerfile \

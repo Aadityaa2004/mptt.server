@@ -169,8 +169,9 @@ Edit `.env.production` and replace all `CHANGE_ME` values:
 **Domain Configuration:**
 ```bash
 DOMAIN=orpheus-networks.com
-NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com/api
-NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com/api
+# Origin only — do not append /api (the app adds /api/... to every API path).
+NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com
+NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com
 CORS_ALLOWED_ORIGINS=https://orpheus-networks.com,https://www.orpheus-networks.com
 ```
 
@@ -392,9 +393,9 @@ docker logs nginx-proxy
    # or visit in browser: http://orpheus-networks.com
    ```
 
-3. **Test API:**
+3. **Test API (liveness):**
    ```bash
-   curl http://orpheus-networks.com/api/health
+   curl http://orpheus-networks.com/health/live
    ```
 
 **Expected:** Should connect to your Raspberry Pi (may see errors until SSL is set up).

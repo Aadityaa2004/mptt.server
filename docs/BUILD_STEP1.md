@@ -130,8 +130,8 @@ docker buildx build \
 ```bash
 docker buildx build \
     --platform linux/arm64 \
-    --build-arg NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com/api \
-    --build-arg NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com/api \
+    --build-arg NEXT_PUBLIC_API_BASE_URL=https://orpheus-networks.com \
+    --build-arg NEXT_PUBLIC_READINGS_API_BASE_URL=https://orpheus-networks.com \
     -t ${DOCKERHUB_USERNAME}/mptt-server-frontend:latest \
     -f ./src/production/mqt.frontend/Dockerfile \
     --push \

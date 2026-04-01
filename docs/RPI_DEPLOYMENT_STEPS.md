@@ -302,7 +302,7 @@ Should show your MQT frontend.
 ### Test API
 
 ```bash
-curl https://orpheus-networks.com/api/health
+curl https://orpheus-networks.com/health/live
 ```
 
 Should return API health status.
@@ -444,7 +444,7 @@ Then restart the API service: `docker compose -f docker-compose.rpi.yml restart 
 - [ ] All containers running (`docker compose ps`)
 - [ ] Cloudflare Tunnel configured with hostname `orpheus-networks.com` → `http://nginx:80`
 - [ ] External access works: `https://orpheus-networks.com`
-- [ ] API works: `https://orpheus-networks.com/api/health`
+- [ ] API works: `https://orpheus-networks.com/health/live`
 - [ ] MQTT WebSocket works: `wss://orpheus-networks.com/mqtt`
 
 ---

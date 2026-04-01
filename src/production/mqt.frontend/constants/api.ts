@@ -2,11 +2,24 @@
 // endpoint paths below already start with `/api/...`.
 // Local: use http://localhost:9002 (direct to API) or http://localhost (via nginx).
 // Production: set NEXT_PUBLIC_* at build time (e.g. https://orpheus-networks.com).
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9002";
 
-export const READINGS_API_BASE_URL =
-  process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "http://localhost:9002";
+/** Strips a trailing `/api` so misconfigured build-args or env still produce correct URLs. */
+function normalizeApiPublicBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (trimmed.endsWith("/api")) {
+    const withoutApi = trimmed.slice(0, -4).replace(/\/+$/, "");
+    return withoutApi || trimmed;
+  }
+  return trimmed;
+}
+
+export const API_BASE_URL = normalizeApiPublicBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9002"
+);
+
+export const READINGS_API_BASE_URL = normalizeApiPublicBaseUrl(
+  process.env.NEXT_PUBLIC_READINGS_API_BASE_URL || "http://localhost:9002"
+);
 
 export const API_ENDPOINTS = {
   AUTH: {
