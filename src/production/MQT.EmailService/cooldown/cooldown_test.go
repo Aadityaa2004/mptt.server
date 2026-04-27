@@ -6,14 +6,14 @@ import (
 )
 
 func TestTracker_IsInCooldown_Empty(t *testing.T) {
-	tracker := NewTracker(60, 70) // 60 min cooldown, 70% reset threshold
+	tracker := NewTracker(60, 70, false) // 60 min cooldown, 70% reset threshold
 	if tracker.IsInCooldown("key1") {
 		t.Error("empty key should not be in cooldown")
 	}
 }
 
 func TestTracker_RecordAndIsInCooldown(t *testing.T) {
-	tracker := NewTracker(1, 70) // 1 minute cooldown
+	tracker := NewTracker(1, 70, false) // 1 minute cooldown
 	key := "user@x.com:device1"
 
 	tracker.Record(key)
@@ -23,7 +23,7 @@ func TestTracker_RecordAndIsInCooldown(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	tracker := NewTracker(60, 70)
+	tracker := NewTracker(60, 70, false)
 	key := "user@x.com:device1"
 
 	tracker.Record(key)
@@ -37,7 +37,7 @@ func TestTracker_Reset(t *testing.T) {
 }
 
 func TestTracker_ShouldReset(t *testing.T) {
-	tracker := NewTracker(60, 70)
+	tracker := NewTracker(60, 70, false)
 
 	if !tracker.ShouldReset(50) {
 		t.Error("50% should be below 70% reset threshold")
@@ -54,7 +54,7 @@ func TestTracker_ShouldReset(t *testing.T) {
 }
 
 func TestTracker_CooldownExpiry(t *testing.T) {
-	tracker := NewTracker(0, 70) // 0 minute cooldown - effectively instant expiry
+	tracker := NewTracker(0, 70, false) // 0 minute cooldown - effectively instant expiry
 	key := "user@x.com:device1"
 
 	tracker.Record(key)

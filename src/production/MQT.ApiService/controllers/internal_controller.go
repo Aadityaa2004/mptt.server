@@ -174,9 +174,10 @@ func (c *InternalController) CreateReading(ctx *gin.Context) {
 		return
 	}
 
-	// Check if we should send a bucket fill alert (fire-and-forget)
+	// Check alerts (fire-and-forget)
 	if req.Payload.Sensors.Level != nil {
 		go c.checkAndSendAlert(req.PiID, req.DeviceID, req.Payload.Sensors.Level.Value)
+		go c.checkAndSendEmptyAlert(req.PiID, req.DeviceID, req.Payload.Sensors.Level.Value, ts)
 	}
 
 	ctx.JSON(http.StatusCreated, CreateReadingResponse{
@@ -238,6 +239,57 @@ func (c *InternalController) checkAndSendAlert(piID, deviceID string, sensorDist
 
 	if resp.StatusCode >= 300 {
 		log.Printf("Email service returned status %d for device %s", resp.StatusCode, deviceID)
+	}
+}
+
+// checkAndSendEmptyAlert fires an alert when fill drops below the empty threshold.
+func (c *InternalController) checkAndSendEmptyAlert(piID, deviceID string, sensorDistance float64, ts time.Time) {
+	device, err := c.deviceRepo.GetDevice(context.Background(), piID, deviceID)
+	if err != nil || device == nil {
+		return
+	}
+
+	if device.Height <= 0 || device.TopDiameter <= 0 || device.BottomDiameter <= 0 {
+		return
+	}
+
+	fillPct := calculateFillPercentage(device.Height, device.TopDiameter, device.BottomDiameter, sensorDistance)
+
+	user, err := c.userRepo.GetUserByDeviceID(context.Background(), deviceID)
+	if err != nil || user == nil {
+		return
+	}
+
+	emptyThreshold := float64(c.config.Alert.EmptyThreshold)
+	if fillPct > emptyThreshold {
+		return
+	}
+
+	alertPayload := map[string]interface{}{
+		"user_email":      user.Email,
+		"user_name":       user.Username,
+		"device_id":       deviceID,
+		"fill_percentage": fillPct,
+		"timestamp":       ts.UTC().Format(time.RFC3339),
+	}
+
+	body, err := json.Marshal(alertPayload)
+	if err != nil {
+		log.Printf("Failed to marshal empty alert payload: %v", err)
+		return
+	}
+
+	emailURL := c.config.Alert.EmailServiceURL + "/alerts/bucket-empty"
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Post(emailURL, "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("Failed to send empty alert to email service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		log.Printf("Email service returned status %d for empty alert on device %s", resp.StatusCode, deviceID)
 	}
 }
 

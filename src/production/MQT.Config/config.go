@@ -24,10 +24,13 @@ type EmailConfig struct {
 
 // AlertConfig holds alert behavior configuration
 type AlertConfig struct {
-	BucketThreshold int    `json:"bucket_threshold"`
-	ResetThreshold  int    `json:"reset_threshold"`
-	CooldownMinutes int    `json:"cooldown_minutes"`
-	EmailServiceURL string `json:"email_service_url"`
+	BucketThreshold     int    `json:"bucket_threshold"`
+	ResetThreshold      int    `json:"reset_threshold"`
+	CooldownMinutes     int    `json:"cooldown_minutes"`
+	EmailServiceURL     string `json:"email_service_url"`
+	EmptyThreshold      int    `json:"empty_threshold"`
+	EmptyResetThreshold int    `json:"empty_reset_threshold"`
+	EmptyCooldownMinutes int   `json:"empty_cooldown_minutes"`
 }
 
 // Config holds all application configuration
@@ -238,9 +241,12 @@ func LoadEmailConfig() (*EmailServiceConfig, error) {
 			FromAddress:    getEnv("EMAIL_FROM_ADDRESS", ""),
 		},
 		Alert: AlertConfig{
-			BucketThreshold: getInt("ALERT_BUCKET_THRESHOLD", 75),
-			ResetThreshold:  getInt("ALERT_RESET_THRESHOLD", 70),
-			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
+			BucketThreshold:      getInt("ALERT_BUCKET_THRESHOLD", 75),
+			ResetThreshold:       getInt("ALERT_RESET_THRESHOLD", 70),
+			CooldownMinutes:      getInt("ALERT_COOLDOWN_MINUTES", 720),
+			EmptyThreshold:       getInt("ALERT_EMPTY_THRESHOLD", 15),
+			EmptyResetThreshold:  getInt("ALERT_EMPTY_RESET_THRESHOLD", 25),
+			EmptyCooldownMinutes: getInt("ALERT_EMPTY_COOLDOWN_MINUTES", 60),
 		},
 	}
 
@@ -342,10 +348,13 @@ func LoadApiConfig() (*Config, error) {
 			FromAddress:    getEnv("EMAIL_FROM_ADDRESS", ""),
 		},
 		Alert: AlertConfig{
-			BucketThreshold: getInt("ALERT_BUCKET_THRESHOLD", 75),
-			ResetThreshold:  getInt("ALERT_RESET_THRESHOLD", 70),
-			CooldownMinutes: getInt("ALERT_COOLDOWN_MINUTES", 720),
-			EmailServiceURL: getEnv("EMAIL_SERVICE_URL", "http://mqt-email-service:9004"),
+			BucketThreshold:      getInt("ALERT_BUCKET_THRESHOLD", 75),
+			ResetThreshold:       getInt("ALERT_RESET_THRESHOLD", 70),
+			CooldownMinutes:      getInt("ALERT_COOLDOWN_MINUTES", 720),
+			EmailServiceURL:      getEnv("EMAIL_SERVICE_URL", "http://mqt-email-service:9004"),
+			EmptyThreshold:       getInt("ALERT_EMPTY_THRESHOLD", 15),
+			EmptyResetThreshold:  getInt("ALERT_EMPTY_RESET_THRESHOLD", 25),
+			EmptyCooldownMinutes: getInt("ALERT_EMPTY_COOLDOWN_MINUTES", 60),
 		},
 		FrontendBaseURL:    getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
 		TurnstileSecretKey: getEnv("TURNSTILE_SECRET_KEY", ""),

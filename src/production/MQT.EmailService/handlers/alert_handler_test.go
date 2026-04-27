@@ -16,9 +16,10 @@ import (
 func TestAlertHandler_BucketFill_Sent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockEmailSender{}
-	tracker := cooldown.NewTracker(60, 70)
+	tracker := cooldown.NewTracker(60, 70, false)
 	log := testutil.NewDiscardLogger()
-	handler := NewAlertHandler(mock, tracker, log)
+	emptyTracker := cooldown.NewTracker(60, 25, true)
+	handler := NewAlertHandler(mock, tracker, emptyTracker, log)
 
 	r := gin.New()
 	r.POST("/alerts/bucket-fill", handler.HandleBucketFillAlert)
@@ -41,9 +42,10 @@ func TestAlertHandler_BucketFill_Sent(t *testing.T) {
 func TestAlertHandler_BucketFill_BelowThreshold(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockEmailSender{}
-	tracker := cooldown.NewTracker(60, 70)
+	tracker := cooldown.NewTracker(60, 70, false)
 	log := testutil.NewDiscardLogger()
-	handler := NewAlertHandler(mock, tracker, log)
+	emptyTracker := cooldown.NewTracker(60, 25, true)
+	handler := NewAlertHandler(mock, tracker, emptyTracker, log)
 
 	r := gin.New()
 	r.POST("/alerts/bucket-fill", handler.HandleBucketFillAlert)
@@ -66,9 +68,10 @@ func TestAlertHandler_BucketFill_BelowThreshold(t *testing.T) {
 func TestAlertHandler_BucketFill_Cooldown(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockEmailSender{}
-	tracker := cooldown.NewTracker(60, 70)
+	tracker := cooldown.NewTracker(60, 70, false)
 	log := testutil.NewDiscardLogger()
-	handler := NewAlertHandler(mock, tracker, log)
+	emptyTracker := cooldown.NewTracker(60, 25, true)
+	handler := NewAlertHandler(mock, tracker, emptyTracker, log)
 
 	key := "u@x.com:d1"
 	tracker.Record(key)
@@ -94,9 +97,10 @@ func TestAlertHandler_BucketFill_Cooldown(t *testing.T) {
 func TestAlertHandler_BucketFill_SMTPError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockEmailSender{sendErr: errors.New("SMTP failed")}
-	tracker := cooldown.NewTracker(60, 70)
+	tracker := cooldown.NewTracker(60, 70, false)
 	log := testutil.NewDiscardLogger()
-	handler := NewAlertHandler(mock, tracker, log)
+	emptyTracker := cooldown.NewTracker(60, 25, true)
+	handler := NewAlertHandler(mock, tracker, emptyTracker, log)
 
 	r := gin.New()
 	r.POST("/alerts/bucket-fill", handler.HandleBucketFillAlert)

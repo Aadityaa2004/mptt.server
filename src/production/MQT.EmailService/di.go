@@ -29,6 +29,7 @@ func InitializeEmailApp() (*gin.Engine, *config.EmailServiceConfig, *logger.Logg
 	router.Use(gin.Recovery())
 
 	router.POST("/alerts/bucket-fill", alertHandler.HandleBucketFillAlert)
+	router.POST("/alerts/bucket-empty", alertHandler.HandleBucketEmptyAlert)
 	router.POST("/send-otp", emailHandler.SendOTP)
 	router.POST("/send-password-reset", emailHandler.SendPasswordReset)
 	router.GET("/health", func(c *gin.Context) {

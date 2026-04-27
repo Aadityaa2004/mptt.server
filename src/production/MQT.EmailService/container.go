@@ -13,12 +13,13 @@ import (
 
 // EmailContainer manages dependencies for the Email service
 type EmailContainer struct {
-	config          *config.EmailServiceConfig
-	logger          *logger.Logger
-	emailService    *service.EmailService
-	cooldownTracker *cooldown.Tracker
-	emailHandler    *handlers.EmailHandler
-	alertHandler    *handlers.AlertHandler
+	config            *config.EmailServiceConfig
+	logger            *logger.Logger
+	emailService      *service.EmailService
+	cooldownTracker   *cooldown.Tracker
+	emptyAlertTracker *cooldown.Tracker
+	emailHandler      *handlers.EmailHandler
+	alertHandler      *handlers.AlertHandler
 }
 
 // NewEmailContainer creates a new Email service container
@@ -40,17 +41,19 @@ func NewEmailContainer() (*EmailContainer, error) {
 		cfg.Email.FromAddress,
 	)
 
-	cooldownTracker := cooldown.NewTracker(cfg.Alert.CooldownMinutes, cfg.Alert.ResetThreshold)
+	cooldownTracker := cooldown.NewTracker(cfg.Alert.CooldownMinutes, cfg.Alert.ResetThreshold, false)
+	emptyAlertTracker := cooldown.NewTracker(cfg.Alert.EmptyCooldownMinutes, cfg.Alert.EmptyResetThreshold, true)
 	emailHandler := handlers.NewEmailHandler(emailSvc, log)
-	alertHandler := handlers.NewAlertHandler(emailSvc, cooldownTracker, log)
+	alertHandler := handlers.NewAlertHandler(emailSvc, cooldownTracker, emptyAlertTracker, log)
 
 	return &EmailContainer{
-		config:          cfg,
-		logger:          log,
-		emailService:    emailSvc,
-		cooldownTracker: cooldownTracker,
-		emailHandler:    emailHandler,
-		alertHandler:    alertHandler,
+		config:            cfg,
+		logger:            log,
+		emailService:      emailSvc,
+		cooldownTracker:   cooldownTracker,
+		emptyAlertTracker: emptyAlertTracker,
+		emailHandler:      emailHandler,
+		alertHandler:      alertHandler,
 	}, nil
 }
 
